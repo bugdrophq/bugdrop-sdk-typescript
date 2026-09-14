@@ -1,5 +1,13 @@
 # Architecture
 
+## Repository ownership
+
+This SDK repository owns the TypeScript packages and their compatibility fixtures.
+`mean-weasel/bugdrop` owns the hosted widget, Worker, and protocol implementation. `bugdrop-web`
+owns the Application-management experience and provisions the credentials consumed by this SDK and
+the Worker. The web application is still under development, so its provisioning contract must be
+confirmed against the fixtures here before the SDK is released.
+
 ## Package boundary
 
 `@bugdrop/browser` and `@bugdrop/server` share only the versioned capability response contract.
