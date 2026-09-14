@@ -33,7 +33,7 @@
     "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.2",
+    "@eslint/js": "10.0.1",
     "@types/node": "22.20.2",
     "@vitest/coverage-v8": "4.1.11",
     "esbuild": "0.28.1",
