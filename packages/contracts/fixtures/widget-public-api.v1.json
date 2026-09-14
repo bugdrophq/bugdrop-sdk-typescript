@@ -1,0 +1,4 @@
+{
+  "source": "mean-weasel/bugdrop src/widget/variants/public-types.d.ts",
+  "methods": ["open", "close", "hide", "show", "isOpen", "isButtonVisible", "setTheme"]
+}
