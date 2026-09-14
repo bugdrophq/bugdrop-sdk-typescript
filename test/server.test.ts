@@ -33,7 +33,13 @@ describe('@bugdrop/server', () => {
     });
     expect(body.subject).not.toBe(rawSubject);
     expect(serializedRequest).not.toContain(rawSubject);
-    expect(init?.headers).toMatchObject({ Authorization: `Bearer ${secret}` });
+    expect(init?.headers).toMatchObject({
+      Accept: 'application/vnd.bugdrop.submission-capability.v1+json',
+      Authorization: `Bearer ${secret}`,
+      'Content-Type': 'application/json',
+      'X-BugDrop-Contract-Version': '1',
+    });
+    expect(init?.redirect).toBe('error');
   });
 
   it('rejects caller-supplied Application and repository authority before exchange', async () => {
@@ -121,5 +127,72 @@ describe('@bugdrop/server', () => {
     await expect(client.createSubmissionToken({ subject: rawSubject })).rejects.toMatchObject({
       code: 'invalid_response',
     });
+  });
+});
+
+describe('@bugdrop/server input validation', () => {
+  it.each([undefined, '', 'short', ' padded-secret-key-value '])(
+    'rejects invalid secret %s',
+    (secretKey) => {
+      expect(() => new BugDrop({ secretKey, fetch: vi.fn() })).toThrow('server secret key');
+    }
+  );
+
+  it('rejects invalid operation objects and pseudonymization keys', async () => {
+    const client = new BugDrop({ secretKey: secret, fetch: vi.fn() });
+    await expect(client.createSubmissionToken(null as never)).rejects.toThrow('options object');
+    expect(() => pseudonymizeSubject('', secret)).toThrow('subject');
+    expect(() => pseudonymizeSubject(rawSubject, 'short')).toThrow('secret key');
+  });
+
+  it.each([
+    [{ subject: rawSubject, origin: 'not a URL' }, 'origin'],
+    [{ subject: rawSubject, origin: 'https://example.com/path' }, 'origin'],
+    [{ subject: rawSubject, environment: 'bad environment!' }, 'environment'],
+  ])('rejects malformed exchange option %#', async (options, message) => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    const client = new BugDrop({ secretKey: secret, fetch });
+    await expect(client.createSubmissionToken(options)).rejects.toThrow(message);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['not a URL', 'valid URL'],
+    ['https://example.com/token?secret=value', 'query string'],
+    ['https://example.com/token#fragment', 'query string'],
+  ])('rejects malformed endpoint %s', (endpoint, message) => {
+    expect(() => new BugDrop({ secretKey: secret, endpoint })).toThrow(message);
+  });
+
+  it.each([0, 60_001, Number.NaN])('rejects invalid timeout %s', (timeoutMs) => {
+    expect(() => new BugDrop({ secretKey: secret, timeoutMs })).toThrow('timeoutMs');
+  });
+
+  it('accepts an HTTP localhost endpoint for local contract testing', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
+    const client = new BugDrop({
+      secretKey: secret,
+      endpoint: 'http://sdk.localhost/v1/submission-capabilities',
+      fetch,
+    });
+    await expect(client.createSubmissionToken({ subject: rawSubject })).resolves.toEqual(response);
+  });
+
+  it('wraps malformed successful responses without exposing their contents', async () => {
+    const reflected = `${secret}-${rawSubject}`;
+    const client = new BugDrop({
+      secretKey: secret,
+      fetch: vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValue(Response.json({ token: reflected })),
+    });
+    let thrown: unknown;
+    try {
+      await client.createSubmissionToken({ subject: rawSubject });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ code: 'invalid_response', status: 200 });
+    expect(String(thrown)).not.toContain(reflected);
   });
 });
