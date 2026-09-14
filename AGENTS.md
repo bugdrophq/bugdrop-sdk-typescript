@@ -16,6 +16,11 @@
 - Pin dependency versions exactly and commit `package-lock.json`.
 - Keep shared wire contracts versioned in `packages/contracts`.
 - Run `npm run validate` before declaring a change complete.
+- Keep production and test code at or below 300 non-blank, non-comment lines per file. ESLint
+  enforces this, along with a 150-line function limit.
+- Keep Knip clean. New entry points and intentionally indirect tooling dependencies must be recorded
+  in `knip.json` rather than hidden with broad ignores.
+- Pin every GitHub Action to a full commit SHA and keep workflow permissions denied by default.
 - Before completion, identify and attempt the strongest realistic failure mode. For security
   boundary changes, run `npm run test:security` and report the evidence.
 - Do not publish, deploy, or create credentials from this repository without explicit approval.

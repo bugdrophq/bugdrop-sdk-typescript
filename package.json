@@ -16,27 +16,37 @@
     "esbuild": "0.28.1"
   },
   "scripts": {
+    "audit": "npm audit --audit-level=moderate",
     "build": "npm run build -w @bugdrop/contracts && npm run build -w @bugdrop/browser && npm run build -w @bugdrop/server",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run knip && npm run audit && npm run check:workflows",
+    "check:workflows": "node scripts/check-workflows.mjs",
     "clean": "npm run clean --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "knip": "knip",
     "lint": "eslint .",
+    "pack:check": "npm pack --dry-run -w @bugdrop/browser && npm pack --dry-run -w @bugdrop/server",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:security": "npm run build && node scripts/verify-browser-boundary.mjs",
     "typecheck": "tsc --project tsconfig.test.json --noEmit",
-    "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run test:security"
+    "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
     "@types/node": "22.20.2",
+    "@vitest/coverage-v8": "4.1.11",
     "esbuild": "0.28.1",
     "eslint": "10.8.0",
+    "globals": "16.5.0",
     "jsdom": "29.0.1",
+    "knip": "5.76.1",
     "prettier": "3.9.6",
     "tsup": "8.5.1",
     "typescript": "5.7.2",
     "typescript-eslint": "8.65.0",
     "vite": "7.3.6",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "yaml": "2.9.0"
   }
 }

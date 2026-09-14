@@ -2,20 +2,75 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
+    types: [opened, synchronize, reopened]
+  merge_group:
 
-permissions:
-  contents: read
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
+  check:
+    name: Lint, Typecheck, Knip, Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22.22.3
           cache: npm
-      - run: npx --yes npm@11.19.1 ci
-      - run: npm run validate
+
+      - name: Install locked dependencies
+        run: npx --yes npm@11.19.1 ci
+
+      - name: Run static and supply-chain checks
+        run: npm run check
+
+  test:
+    name: Unit Tests & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: check
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.22.3
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npx --yes npm@11.19.1 ci
+
+      - name: Run tests with enforced coverage
+        run: npm run test:coverage
+
+      - name: Build and disprove browser-boundary regressions
+        run: npm run test:security
+
+      - name: Verify publishable package contents
+        run: npm run pack:check
+
+      - name: Preserve coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unit-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
