@@ -16,6 +16,7 @@ assertServerRuntime();
 
 export interface BugDropServerOptions {
   secretKey: string | undefined;
+  subjectKey: string | undefined;
   endpoint?: string;
   timeoutMs?: number;
   fetch?: typeof globalThis.fetch;
@@ -46,6 +47,7 @@ export class BugDropServerError extends Error {
 
 export class BugDrop {
   readonly #secretKey: string;
+  readonly #subjectKey: string;
   readonly #endpoint: string;
   readonly #timeoutMs: number;
   readonly #fetch: typeof globalThis.fetch;
@@ -62,8 +64,16 @@ export class BugDrop {
     ) {
       throw new TypeError('BugDrop requires a valid server secret key');
     }
+    if (
+      typeof options.subjectKey !== 'string' ||
+      options.subjectKey.length < 32 ||
+      options.subjectKey !== options.subjectKey.trim()
+    ) {
+      throw new TypeError('BugDrop requires a valid stable subject key');
+    }
 
     this.#secretKey = options.secretKey;
+    this.#subjectKey = options.subjectKey;
     this.#endpoint = validateEndpoint(options.endpoint ?? DEFAULT_CAPABILITY_ENDPOINT);
     this.#timeoutMs = validateTimeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     this.#fetch = options.fetch ?? globalThis.fetch;
@@ -76,7 +86,7 @@ export class BugDrop {
   async createSubmissionToken(
     options: CreateSubmissionTokenOptions
   ): Promise<SubmissionCapability> {
-    const requestBody = createRequestBody(options, this.#secretKey);
+    const requestBody = createRequestBody(options, this.#subjectKey);
     const timeoutSignal = AbortSignal.timeout(this.#timeoutMs);
     const signal = options.signal
       ? AbortSignal.any([options.signal, timeoutSignal])
@@ -129,12 +139,16 @@ export class BugDrop {
   }
 }
 
-export function pseudonymizeSubject(subject: string, secretKey: string): string {
+export function pseudonymizeSubject(subject: string, subjectKey: string): string {
   validateSubject(subject);
-  if (typeof secretKey !== 'string' || secretKey.length < 16) {
-    throw new TypeError('A valid server secret key is required for subject pseudonymization');
+  if (
+    typeof subjectKey !== 'string' ||
+    subjectKey.length < 32 ||
+    subjectKey !== subjectKey.trim()
+  ) {
+    throw new TypeError('A valid stable subject key is required for subject pseudonymization');
   }
-  const digest = createHmac('sha256', secretKey)
+  const digest = createHmac('sha256', subjectKey)
     .update(SUBJECT_DOMAIN_SEPARATOR)
     .update(subject, 'utf8')
     .digest('base64url');
@@ -143,7 +157,7 @@ export function pseudonymizeSubject(subject: string, secretKey: string): string 
 
 function createRequestBody(
   options: CreateSubmissionTokenOptions,
-  secretKey: string
+  subjectKey: string
 ): SubmissionCapabilityRequest {
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSubmissionToken requires an options object');
@@ -151,7 +165,7 @@ function createRequestBody(
   assertOnlyKeys(options, ['subject', 'origin', 'environment', 'signal']);
   const body: SubmissionCapabilityRequest = {
     schemaVersion: BUGDROP_CONTRACT_VERSION,
-    subject: pseudonymizeSubject(options.subject, secretKey),
+    subject: pseudonymizeSubject(options.subject, subjectKey),
   };
   if (options.origin !== undefined) body.origin = validateOrigin(options.origin);
   if (options.environment !== undefined) {

@@ -18,6 +18,12 @@ bundles (for example, `NEXT_PUBLIC_` or `VITE_`). The browser package has no `se
 does not import `@bugdrop/server`. `npm run test:security` inspects the built browser artifacts and
 package graph for regressions across this boundary.
 
+Keep `BUGDROP_SECRET_KEY` and `BUGDROP_SUBJECT_KEY` in the same server-only secret store. The former
+authenticates capability requests and may rotate normally. The latter is a stable per-Application
+HMAC key: do not rotate it without an identity migration, because changing it intentionally changes
+every derived subject identifier. Neither value is sent to the browser, and the subject key is not
+sent to BugDrop.
+
 Errors intentionally exclude remote response bodies and network exception details because those
 systems sometimes echo authorization material. Use the error code and HTTP status for operational
 diagnostics.
