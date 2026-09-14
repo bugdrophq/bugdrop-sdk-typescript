@@ -26,6 +26,12 @@ The optional `origin` and `environment` fields may narrow a capability. The clie
 unexpected caller fields rather than forwarding them. In particular, no Application ID,
 repository, installation, labels, or flow permissions are accepted by this operation.
 
+The subject digest uses a dedicated, random per-Application subject key that is distinct from the
+bearer authentication secret. The subject key never appears in the capability exchange or leaves
+the customer backend during normal use. Rotating the bearer secret must leave subject digests
+unchanged; rotating the subject key is an explicit identity migration. BugDrop's Application
+provisioning flow must issue and distinguish both server-only values.
+
 ## Capability exchange response
 
 ```json

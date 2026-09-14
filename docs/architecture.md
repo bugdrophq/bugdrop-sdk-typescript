@@ -13,9 +13,11 @@ short-lived capability token. It proxies the widget's public controller methods 
 or server exchange client.
 
 The server package owns capability issuance from the customer's perspective. It derives an
-Application-scoped pseudonym with HMAC-SHA-256 using the Application credential, sends only that
-derived value to BugDrop, and validates the versioned capability response. The credential is kept
-in a JavaScript private field and is never included in request bodies, errors, or serialization.
+Application-scoped pseudonym with HMAC-SHA-256 using a dedicated stable subject key, sends only that
+derived value to BugDrop, and validates the versioned capability response. The independently
+rotatable authentication secret is used only in the Authorization header. Both server-only values
+are kept in JavaScript private fields and are never included in request bodies, errors, or
+serialization.
 
 ## Future control-plane seam
 
@@ -25,7 +27,9 @@ The `endpoint` constructor option permits staging and compatibility testing with
 public operation. Before release, the authoritative service repository must confirm the final URL
 and run the shared fixtures against the deployed implementation.
 
-The existing hosted widget is authoritative. Its current legacy configuration requires
-`data-repo`; authenticated mode instead requires the future `data-application-id` input. This SDK
-deliberately does not send `data-repo` as a compatibility workaround because doing so would return
-repository authority to the untrusted browser.
+The existing hosted widget is authoritative, and direct script-tag installation remains a
+first-class supported method. The SDK is an additional installation and controller method. The
+current direct configuration accepts `data-repo`; authenticated SDK mode instead requires the
+future `data-application-id` input. This SDK deliberately does not send `data-repo` as a
+compatibility workaround because doing so would return repository authority to the untrusted
+browser.
