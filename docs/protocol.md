@@ -30,7 +30,9 @@ The subject digest uses a dedicated, random per-Application subject key that is 
 bearer authentication secret. The subject key never appears in the capability exchange or leaves
 the customer backend during normal use. Rotating the bearer secret must leave subject digests
 unchanged; rotating the subject key is an explicit identity migration. BugDrop's Application
-provisioning flow must issue and distinguish both server-only values.
+provisioning flow in `bugdrop-web` must issue and distinguish both server-only values. The
+`mean-weasel/bugdrop` Worker implements the exchange and validates the authentication credential
+but does not provision it.
 
 ## Capability exchange response
 
