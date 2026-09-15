@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import {
   BUGDROP_CAPABILITY_MEDIA_TYPE,
   BUGDROP_CONTRACT_VERSION,
@@ -6,17 +5,16 @@ import {
   type SubmissionCapability,
   type SubmissionCapabilityRequest,
 } from '../../contracts/src/index.js';
+import { createApiKeyStrategy, type CapabilityIdentityStrategy } from './api-key.js';
 
 const DEFAULT_CAPABILITY_ENDPOINT =
   'https://bugdrop.neonwatty.workers.dev/v1/submission-capabilities';
 const DEFAULT_TIMEOUT_MS = 10_000;
-const SUBJECT_DOMAIN_SEPARATOR = 'bugdrop:subject:v1\0';
 
 assertServerRuntime();
 
 export interface BugDropServerOptions {
-  secretKey: string | undefined;
-  subjectKey: string | undefined;
+  apiKey: string | undefined;
   endpoint?: string;
   timeoutMs?: number;
   fetch?: typeof globalThis.fetch;
@@ -46,8 +44,7 @@ export class BugDropServerError extends Error {
 }
 
 export class BugDrop {
-  readonly #secretKey: string;
-  readonly #subjectKey: string;
+  readonly #identityStrategy: CapabilityIdentityStrategy;
   readonly #endpoint: string;
   readonly #timeoutMs: number;
   readonly #fetch: typeof globalThis.fetch;
@@ -57,23 +54,7 @@ export class BugDrop {
     if (!options || typeof options !== 'object') {
       throw new TypeError('BugDrop requires an options object');
     }
-    if (
-      typeof options.secretKey !== 'string' ||
-      options.secretKey.length < 16 ||
-      options.secretKey !== options.secretKey.trim()
-    ) {
-      throw new TypeError('BugDrop requires a valid server secret key');
-    }
-    if (
-      typeof options.subjectKey !== 'string' ||
-      options.subjectKey.length < 32 ||
-      options.subjectKey !== options.subjectKey.trim()
-    ) {
-      throw new TypeError('BugDrop requires a valid stable subject key');
-    }
-
-    this.#secretKey = options.secretKey;
-    this.#subjectKey = options.subjectKey;
+    this.#identityStrategy = createApiKeyStrategy(options.apiKey);
     this.#endpoint = validateEndpoint(options.endpoint ?? DEFAULT_CAPABILITY_ENDPOINT);
     this.#timeoutMs = validateTimeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     this.#fetch = options.fetch ?? globalThis.fetch;
@@ -86,7 +67,17 @@ export class BugDrop {
   async createSubmissionToken(
     options: CreateSubmissionTokenOptions
   ): Promise<SubmissionCapability> {
-    const requestBody = createRequestBody(options, this.#subjectKey);
+    if (!options || typeof options !== 'object') {
+      throw new TypeError('createSubmissionToken requires an options object');
+    }
+    const identity = this.#identityStrategy.prepareIdentity(options.subject);
+    const requestBody = createRequestBody(options, identity.wireSubject);
+    const body = JSON.stringify(requestBody);
+    const authenticationHeaders = await identity.authenticateRequest({
+      method: 'POST',
+      url: this.#endpoint,
+      body,
+    });
     const timeoutSignal = AbortSignal.timeout(this.#timeoutMs);
     const signal = options.signal
       ? AbortSignal.any([options.signal, timeoutSignal])
@@ -98,11 +89,11 @@ export class BugDrop {
         method: 'POST',
         headers: {
           Accept: BUGDROP_CAPABILITY_MEDIA_TYPE,
-          Authorization: `Bearer ${this.#secretKey}`,
           'Content-Type': 'application/json',
           'X-BugDrop-Contract-Version': String(BUGDROP_CONTRACT_VERSION),
+          ...authenticationHeaders,
         },
-        body: JSON.stringify(requestBody),
+        body,
         redirect: 'error',
         signal,
       });
@@ -139,25 +130,9 @@ export class BugDrop {
   }
 }
 
-export function pseudonymizeSubject(subject: string, subjectKey: string): string {
-  validateSubject(subject);
-  if (
-    typeof subjectKey !== 'string' ||
-    subjectKey.length < 32 ||
-    subjectKey !== subjectKey.trim()
-  ) {
-    throw new TypeError('A valid stable subject key is required for subject pseudonymization');
-  }
-  const digest = createHmac('sha256', subjectKey)
-    .update(SUBJECT_DOMAIN_SEPARATOR)
-    .update(subject, 'utf8')
-    .digest('base64url');
-  return `bdsub_v1_${digest}`;
-}
-
 function createRequestBody(
   options: CreateSubmissionTokenOptions,
-  subjectKey: string
+  wireSubject: string
 ): SubmissionCapabilityRequest {
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSubmissionToken requires an options object');
@@ -165,7 +140,7 @@ function createRequestBody(
   assertOnlyKeys(options, ['subject', 'origin', 'environment', 'signal']);
   const body: SubmissionCapabilityRequest = {
     schemaVersion: BUGDROP_CONTRACT_VERSION,
-    subject: pseudonymizeSubject(options.subject, subjectKey),
+    subject: wireSubject,
   };
   if (options.origin !== undefined) body.origin = validateOrigin(options.origin);
   if (options.environment !== undefined) {
@@ -177,12 +152,6 @@ function createRequestBody(
 function assertOnlyKeys(value: object, allowedKeys: readonly string[]): void {
   if (Object.keys(value).some((key) => !allowedKeys.includes(key))) {
     throw new TypeError('createSubmissionToken options contain unsupported fields');
-  }
-}
-
-function validateSubject(value: string): void {
-  if (typeof value !== 'string' || value.length === 0 || value.length > 1_024) {
-    throw new TypeError('subject must be a non-empty opaque identifier');
   }
 }
 

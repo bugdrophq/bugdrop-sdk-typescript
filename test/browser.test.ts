@@ -50,7 +50,11 @@ describe('@bugdrop/browser', () => {
     await expect(controller.isButtonVisible()).resolves.toBe(true);
     expect(calls).toEqual(['open', 'close', 'hide', 'show', 'setTheme:light']);
 
-    const providerName = script!.dataset.authTokenProvider!;
+    const providerProperty = widgetApiFixture.authentication
+      .providerDatasetProperty as 'authTokenProvider';
+    const providerName = script!.dataset[providerProperty]!;
+    expect(widgetApiFixture.authentication.providerDataAttribute).toBe('data-auth-token-provider');
+    expect(widgetApiFixture.authentication.providerReturnType).toBe('opaque-token-string');
     const installedProvider = window[providerName as `__bugdropSdkTokenProvider_${string}`];
     expect(await installedProvider!()).toBe(capability.token);
     expect(tokenProvider).toHaveBeenCalledOnce();
@@ -93,7 +97,7 @@ describe('@bugdrop/browser', () => {
       BugDrop.init({
         applicationId: 'app_public_123',
         tokenProvider: async () => capability,
-        ...({ secretKey: 'must-not-enter-browser-config' } as Record<string, unknown>),
+        ...({ apiKey: 'must-not-enter-browser-config' } as Record<string, unknown>),
       })
     ).toThrow('unsupported fields');
     expect(document.querySelector('script')).toBeNull();
