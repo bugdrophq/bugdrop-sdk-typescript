@@ -12,9 +12,11 @@ wire subject: bdsub_v1_<base64url HMAC-SHA-256(root,
 subject size: 1-1024 valid UTF-8 bytes
 ```
 
-`keyId` is the 16-byte unpadded-base64url API-key segment and `root` is the decoded 32-byte root
-segment. `exactSubject` is encoded without trimming, case folding, or Unicode normalization. The
-full API key, decoded root, and raw subject never cross the network.
+Both API-key segments MUST use canonical unpadded base64url: `keyId` MUST decode to exactly 16 bytes
+and `root` MUST decode to exactly 32 bytes. Non-canonical encodings and encoding aliases MUST be
+rejected, not normalized. The derived authentication-secret and subject-HMAC outputs MUST also use
+canonical unpadded base64url. `exactSubject` is encoded without trimming, case folding, or Unicode
+normalization. The full API key, decoded root, and raw subject never cross the network.
 
 The compatibility vector is
 [`packages/contracts/fixtures/api-key-credential.v1.json`](../packages/contracts/fixtures/api-key-credential.v1.json).
