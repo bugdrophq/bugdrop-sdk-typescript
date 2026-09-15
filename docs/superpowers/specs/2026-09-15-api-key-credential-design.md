@@ -1,6 +1,6 @@
 # SDK API-Key Credential Design
 
-**Status:** Approved design direction; not the canonical protocol until implementation
+**Status:** SDK implementation complete; cross-repository consumption pending
 **Date:** 2026-09-15
 
 ## Decision
