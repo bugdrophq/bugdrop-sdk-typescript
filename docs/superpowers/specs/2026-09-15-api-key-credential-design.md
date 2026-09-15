@@ -175,7 +175,9 @@ privacy-safe subject preparation. Existing `{ apiKey }` calls remain valid, and 
 ```ts
 type PreparedCapabilityIdentity = {
   wireSubject: string;
-  authenticateRequest: (request: CanonicalCapabilityRequest) => Promise<Headers>;
+  authenticateRequest: (
+    request: CanonicalCapabilityRequest
+  ) => Promise<Readonly<Record<string, string>>>;
 };
 ```
 
