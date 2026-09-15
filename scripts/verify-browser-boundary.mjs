@@ -14,10 +14,12 @@ const builtText = (
 
 const forbidden = [
   '@bugdrop/server',
-  'BUGDROP_SECRET_KEY',
-  'NEXT_PUBLIC_BUGDROP_SECRET',
-  'VITE_BUGDROP_SECRET',
-  'secretKey',
+  'BUGDROP_API_KEY',
+  'NEXT_PUBLIC_BUGDROP_API_KEY',
+  'VITE_BUGDROP_API_KEY',
+  'bd_api_v1',
+  'bd_auth_v1',
+  'apiKey',
   'data-repo',
   'categoryLabels',
   'installationId',
@@ -48,14 +50,14 @@ const browserConsumer = await build({
   },
   bundle: true,
   define: {
-    'process.env.NEXT_PUBLIC_BUGDROP_SECRET_KEY': JSON.stringify('browser-build-secret-sentinel'),
+    'process.env.NEXT_PUBLIC_BUGDROP_API_KEY': JSON.stringify('browser-build-api-key-sentinel'),
   },
   format: 'esm',
   platform: 'browser',
   write: false,
 });
 const browserConsumerText = browserConsumer.outputFiles[0]?.text ?? '';
-if (browserConsumerText.includes('browser-build-secret-sentinel')) {
+if (browserConsumerText.includes('browser-build-api-key-sentinel')) {
   throw new Error('Browser security boundary failed: public environment secret entered the bundle');
 }
 
@@ -75,7 +77,9 @@ const serverBrowserText = serverBrowserConsumer.outputFiles[0]?.text ?? '';
 if (
   !serverBrowserText.includes('@bugdrop/server cannot be imported into browser code') ||
   serverBrowserText.includes('node:crypto') ||
-  serverBrowserText.includes('Authorization')
+  serverBrowserText.includes('Authorization') ||
+  serverBrowserText.includes('bd_api_v1') ||
+  serverBrowserText.includes('bd_auth_v1')
 ) {
   throw new Error('@bugdrop/server browser condition did not fail closed');
 }
