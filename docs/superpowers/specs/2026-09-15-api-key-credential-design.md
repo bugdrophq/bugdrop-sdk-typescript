@@ -161,10 +161,11 @@ body, capability response, browser `tokenProvider`, and hosted-widget integratio
 of the authentication method used between the customer backend and BugDrop.
 
 The V1 `apiKey` constructor option is the only public authentication method. Internally,
-`@bugdrop/server` keeps preparation of both the Authorization material and privacy-safe wire subject
+`@bugdrop/server` keeps preparation of both request authentication and the privacy-safe wire subject
 behind an authentication strategy boundary. The API-key strategy derives both outputs from the API
-key root. A future strategy must likewise prepare both outputs; abstracting only header creation is
-insufficient because it would leave subject privacy coupled to the API-key strategy.
+key root. A future strategy must likewise prepare both outputs; abstracting only one Authorization
+string is insufficient because it would leave subject privacy coupled to the API-key strategy and
+exclude multi-header or proof-of-possession authentication.
 
 A later BYOA release can add a mutually exclusive `auth` option without removing or changing
 `apiKey`. Its final public shape is deferred because it must define both assertion acquisition and
@@ -173,8 +174,8 @@ privacy-safe subject preparation. Existing `{ apiKey }` calls remain valid, and 
 
 ```ts
 type PreparedCapabilityIdentity = {
-  authorization: string;
   wireSubject: string;
+  authenticateRequest: (request: CanonicalCapabilityRequest) => Promise<Headers>;
 };
 ```
 
@@ -197,10 +198,13 @@ coordinate caller-provided assertion acquisition and provide safe capability exc
 timeouts, and redacted errors. An integrator may instead use the documented HTTP protocol and direct
 script-tag installation.
 
-Direct authenticated script-tag installation uses the hosted widget's versioned
-`data-auth-token-provider` hook to obtain the same BugDrop capability shape as `@bugdrop/browser`.
-This hook is part of the authoritative widget protocol and receives BugDrop capabilities, never API
-keys or BYOA assertions.
+For both installation methods, the customer's endpoint returns the versioned BugDrop capability
+response `{ schemaVersion, token, expiresAt }`. `@bugdrop/browser` validates that response and its
+named global provider returns only the extracted opaque `token` string to the hosted widget. Direct
+authenticated script-tag installation uses the same versioned `data-auth-token-provider` hook; the
+integrator's named global provider is likewise responsible for obtaining the capability and
+returning its `token` string. The hook never receives an API key, BYOA assertion, or complete
+capability response object.
 
 ## Errors and Security Boundaries
 
