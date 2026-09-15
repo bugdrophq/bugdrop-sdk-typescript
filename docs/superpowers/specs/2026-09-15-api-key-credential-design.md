@@ -30,6 +30,9 @@ old pseudonym do not automatically carry into the new epoch.
 - Provisioning credentials in `mean-weasel/bugdrop`.
 - Sending raw user identifiers to BugDrop.
 
+BYOA is not implemented in V1, but V1 must not couple the browser or capability contract to API-key
+authentication in a way that makes BYOA a breaking change.
+
 ## Public SDK API
 
 The server package exposes one credential option:
@@ -138,6 +141,36 @@ capability-family revocation within the same V1 scope.
 
 Cross-repository behavior is not considered compatible until each implementation passes the same
 V1 fixtures.
+
+## Future Authentication Extensibility
+
+Capability issuance authentication is a replaceable server-side concern. The capability request
+body, capability response, browser `tokenProvider`, and hosted-widget integration remain independent
+of the authentication method used between the customer backend and BugDrop.
+
+The V1 `apiKey` constructor option is the only public authentication method. Internally,
+`@bugdrop/server` keeps credential parsing and Authorization-header creation behind an
+authentication strategy boundary. A later BYOA release can add a mutually exclusive `auth` option
+without removing or changing `apiKey`, for example:
+
+```ts
+new BugDrop({
+  auth: {
+    type: 'byoa',
+    getAssertion: async () => customerSignedAssertion,
+  },
+});
+```
+
+The precise BYOA assertion type and validation rules are intentionally deferred. A BYOA assertion
+is presented only by the customer backend to the capability endpoint. It is never passed to the
+browser SDK or hosted widget. The Worker validates the configured authentication strategy and then
+issues the same BugDrop capability shape used by API-key authentication.
+
+Both SDK packages remain optional conveniences under BYOA. `@bugdrop/browser` still provides hosted
+widget loading, token delivery, controller methods, and event integration. `@bugdrop/server` can
+provide assertion acquisition, safe capability exchange, validation, timeouts, and redacted errors.
+An integrator may instead use the documented HTTP protocol and direct script-tag installation.
 
 ## Errors and Security Boundaries
 
