@@ -1,6 +1,6 @@
 # SDK API-Key Credential Design
 
-**Status:** Approved direction; implementation pending  
+**Status:** Approved design direction; not the canonical protocol until implementation
 **Date:** 2026-09-15
 
 ## Decision
@@ -123,13 +123,22 @@ SHA-256 digest of the high-entropy derived authentication secret, lifecycle stat
 timestamps. It does not retain the root secret or any subject-derived value. The Worker performs a
 constant-time comparison against the stored authentication digest.
 
+The credential registry is the authoritative control-plane record shared by `bugdrop-web` and the
+Worker. `bugdrop-web` is its only V1 lifecycle writer; the Worker is a validation reader. A record
+has one of `active`, `retiring`, or `revoked` status. A retiring record includes its acceptance
+deadline, after which the Worker rejects it. Revocation overrides a future retirement deadline.
+Registry technology is implementation-specific, but an acknowledged mutation must become visible
+to every Worker within 60 seconds. Positive validation caches cannot exceed that propagation bound,
+and validation fails closed when neither the registry nor a still-valid cached record is available.
+Future BYOA provider configuration uses the same control-plane writer/data-plane reader boundary.
+
 Rotation creates a new key identifier and root secret, beginning a new pseudonymous identity epoch.
 The old credential may remain valid for a short, explicit deployment grace period and is then
 revoked. The UI and documentation warn that rotation resets pseudonym-based limits and blocks.
 
-Revocation immediately prevents new capability issuance for that key. Previously issued
-capabilities remain valid only until their short expiry unless the Worker supports immediate
-capability-family revocation within the same V1 scope.
+Revocation prevents new capability issuance within the registry's 60-second propagation bound.
+Previously issued capabilities remain valid only until their short expiry unless the Worker
+supports immediate capability-family revocation within the same V1 scope.
 
 ## Repository Ownership
 
@@ -142,6 +151,9 @@ capability-family revocation within the same V1 scope.
 Cross-repository behavior is not considered compatible until each implementation passes the same
 V1 fixtures.
 
+Until implementation updates `docs/protocol.md` and replaces the existing subject-key fixture, this
+document records the approved target rather than the repository's active canonical contract.
+
 ## Future Authentication Extensibility
 
 Capability issuance authentication is a replaceable server-side concern. The capability request
@@ -149,28 +161,46 @@ body, capability response, browser `tokenProvider`, and hosted-widget integratio
 of the authentication method used between the customer backend and BugDrop.
 
 The V1 `apiKey` constructor option is the only public authentication method. Internally,
-`@bugdrop/server` keeps credential parsing and Authorization-header creation behind an
-authentication strategy boundary. A later BYOA release can add a mutually exclusive `auth` option
-without removing or changing `apiKey`, for example:
+`@bugdrop/server` keeps preparation of both the Authorization material and privacy-safe wire subject
+behind an authentication strategy boundary. The API-key strategy derives both outputs from the API
+key root. A future strategy must likewise prepare both outputs; abstracting only header creation is
+insufficient because it would leave subject privacy coupled to the API-key strategy.
+
+A later BYOA release can add a mutually exclusive `auth` option without removing or changing
+`apiKey`. Its final public shape is deferred because it must define both assertion acquisition and
+privacy-safe subject preparation. Existing `{ apiKey }` calls remain valid, and providing both
+`apiKey` and `auth` fails validation.
 
 ```ts
-new BugDrop({
-  auth: {
-    type: 'byoa',
-    getAssertion: async () => customerSignedAssertion,
-  },
-});
+type PreparedCapabilityIdentity = {
+  authorization: string;
+  wireSubject: string;
+};
 ```
 
-The precise BYOA assertion type and validation rules are intentionally deferred. A BYOA assertion
-is presented only by the customer backend to the capability endpoint. It is never passed to the
-browser SDK or hosted widget. The Worker validates the configured authentication strategy and then
-issues the same BugDrop capability shape used by API-key authentication.
+This is an internal responsibility boundary, not a proposed public type. The precise BYOA assertion,
+subject preparation, and validation rules are intentionally deferred. A BYOA assertion is presented
+only by the customer backend to the capability endpoint. It is never passed to the browser SDK or
+hosted widget. The BYOA strategy must bind its assertion to the privacy-safe wire subject, and the
+SDK never silently falls back to transmitting the caller's raw `subject`. The Worker validates the
+configured authentication strategy and then issues the same BugDrop capability shape used by
+API-key authentication.
+
+Moving an Application from API-key authentication to BYOA starts a new pseudonymous identity epoch
+by default, just like API-key rotation. Preserving pseudonym-based limits or blocks across
+authentication methods requires an explicit future identity-migration protocol and is not inferred
+from raw identifiers or retention of an obsolete API key.
 
 Both SDK packages remain optional conveniences under BYOA. `@bugdrop/browser` still provides hosted
 widget loading, token delivery, controller methods, and event integration. `@bugdrop/server` can
-provide assertion acquisition, safe capability exchange, validation, timeouts, and redacted errors.
-An integrator may instead use the documented HTTP protocol and direct script-tag installation.
+coordinate caller-provided assertion acquisition and provide safe capability exchange, validation,
+timeouts, and redacted errors. An integrator may instead use the documented HTTP protocol and direct
+script-tag installation.
+
+Direct authenticated script-tag installation uses the hosted widget's versioned
+`data-auth-token-provider` hook to obtain the same BugDrop capability shape as `@bugdrop/browser`.
+This hook is part of the authoritative widget protocol and receives BugDrop capabilities, never API
+keys or BYOA assertions.
 
 ## Errors and Security Boundaries
 
@@ -201,6 +231,7 @@ The implementation must add tests proving:
 - different subjects produce different pseudonyms;
 - a rotated key produces a different pseudonym for the same subject;
 - exact subject bytes are preserved without implicit normalization;
+- multibyte UTF-8 subjects pass at the 1-byte and 1024-byte boundaries and fail above the limit;
 - authentication and subject outputs use distinct domains;
 - the raw subject and API-key root never appear in serialized requests;
 - malformed and unsupported credentials fail before network access;
