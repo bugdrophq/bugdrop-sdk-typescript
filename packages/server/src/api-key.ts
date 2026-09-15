@@ -6,13 +6,13 @@ const SUBJECT_PREFIX = 'bdsub_v1_';
 const AUTH_DOMAIN = 'bugdrop:auth:v1\0';
 const SUBJECT_DOMAIN = 'bugdrop:subject:v1\0';
 
-export interface CanonicalCapabilityRequest {
+interface CanonicalCapabilityRequest {
   method: 'POST';
   url: string;
   body: string;
 }
 
-export interface PreparedCapabilityIdentity {
+interface PreparedCapabilityIdentity {
   wireSubject: string;
   authenticateRequest(
     request: CanonicalCapabilityRequest
