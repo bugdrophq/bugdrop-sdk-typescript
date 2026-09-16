@@ -1,7 +1,9 @@
 import {
   BUGDROP_CONTRACT_VERSION,
+  parseSubmissionBinding,
   parseUsableSubmissionCapability,
   type SubmissionCapability,
+  type SubmissionBinding,
 } from '../../contracts/src/index.js';
 
 const DEFAULT_WIDGET_URL = 'https://bugdrop.neonwatty.workers.dev/widget.v1.js';
@@ -9,7 +11,9 @@ const DEFAULT_LOAD_TIMEOUT_MS = 10_000;
 
 export type BugDropTheme = 'light' | 'dark' | 'auto';
 export type BugDropPosition = 'bottom-right' | 'bottom-left';
-export type SubmissionTokenProvider = () => SubmissionCapability | Promise<SubmissionCapability>;
+export type SubmissionTokenProvider = (
+  binding: SubmissionBinding
+) => SubmissionCapability | Promise<SubmissionCapability>;
 
 export interface BugDropBrowserOptions {
   applicationId: string;
@@ -34,7 +38,8 @@ interface HostedWidgetApi {
 declare global {
   interface Window {
     BugDrop?: HostedWidgetApi;
-    [key: `__bugdropSdkTokenProvider_${string}`]: (() => Promise<string>) | undefined;
+    [key: `__bugdropSdkTokenProvider_${string}`]:
+      ((binding: SubmissionBinding) => Promise<string>) | undefined;
   }
 }
 
@@ -111,10 +116,11 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
   const widgetUrl = validateServiceUrl(options.widgetUrl ?? DEFAULT_WIDGET_URL, 'widgetUrl');
   const timeoutMs = options.loadTimeoutMs ?? DEFAULT_LOAD_TIMEOUT_MS;
 
-  window[providerName] = async () => {
+  window[providerName] = async (binding: SubmissionBinding) => {
     let capability: SubmissionCapability;
     try {
-      capability = parseUsableSubmissionCapability(await options.tokenProvider());
+      const parsedBinding = parseSubmissionBinding(binding);
+      capability = parseUsableSubmissionCapability(await options.tokenProvider(parsedBinding));
     } catch {
       throw new Error('Unable to authorize BugDrop');
     }

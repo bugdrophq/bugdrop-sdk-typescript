@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 
 import widgetApiFixture from '../packages/contracts/fixtures/widget-public-api.v1.json';
+import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capability = {
   schemaVersion: 1 as const,
   token: 'short-lived-opaque-capability',
   expiresAt: new Date(Date.now() + 4 * 60_000).toISOString(),
+};
+const binding = {
+  submissionId: bindingFixture.bound.submissionId,
+  payloadDigest: bindingFixture.bound.payloadDigest,
 };
 
 describe('@bugdrop/browser', () => {
@@ -54,10 +59,11 @@ describe('@bugdrop/browser', () => {
       .providerDatasetProperty as 'authTokenProvider';
     const providerName = script!.dataset[providerProperty]!;
     expect(widgetApiFixture.authentication.providerDataAttribute).toBe('data-auth-token-provider');
+    expect(widgetApiFixture.authentication.providerParameterType).toBe('submission-binding-v1');
     expect(widgetApiFixture.authentication.providerReturnType).toBe('opaque-token-string');
     const installedProvider = window[providerName as `__bugdropSdkTokenProvider_${string}`];
-    expect(await installedProvider!()).toBe(capability.token);
-    expect(tokenProvider).toHaveBeenCalledOnce();
+    expect(await installedProvider!(binding)).toBe(capability.token);
+    expect(tokenProvider).toHaveBeenCalledExactlyOnceWith(binding);
     expect(document.documentElement.outerHTML).not.toContain(capability.token);
     expect(JSON.stringify(localStorage)).not.toContain(capability.token);
     expect(JSON.stringify(sessionStorage)).not.toContain(capability.token);
@@ -87,8 +93,8 @@ describe('@bugdrop/browser', () => {
     await controller.ready;
     const provider =
       window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
-    await expect(provider!()).rejects.toThrow('Unable to authorize BugDrop');
-    await expect(provider!()).rejects.not.toThrow('must-never-leak');
+    await expect(provider!(binding)).rejects.toThrow('Unable to authorize BugDrop');
+    await expect(provider!(binding)).rejects.not.toThrow('must-never-leak');
   });
 
   it('rejects server-only and privileged configuration fields', async () => {
@@ -228,8 +234,24 @@ describe('@bugdrop/browser failure handling', () => {
     await controller.ready;
     const provider =
       window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
-    await expect(provider!()).rejects.toThrow('Unable to authorize BugDrop');
-    await expect(provider!()).rejects.not.toThrow(secretToken);
+    await expect(provider!(binding)).rejects.toThrow('Unable to authorize BugDrop');
+    await expect(provider!(binding)).rejects.not.toThrow(secretToken);
+  });
+
+  it('rejects an invalid submission binding before requesting a token', async () => {
+    const tokenProvider = vi.fn().mockResolvedValue(capability);
+    const { BugDrop } = await import('../packages/browser/src/index.js');
+    const controller = BugDrop.init({ applicationId: 'app_public_123', tokenProvider });
+    const script = document.querySelector<HTMLScriptElement>('script')!;
+    window.BugDrop = createWidgetApi([]);
+    window.dispatchEvent(new CustomEvent('bugdrop:ready'));
+    await controller.ready;
+    const provider =
+      window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
+    await expect(
+      provider!({ ...binding, payloadDigest: `${binding.payloadDigest}=` })
+    ).rejects.toThrow('Unable to authorize BugDrop');
+    expect(tokenProvider).not.toHaveBeenCalled();
   });
 });
 

@@ -1,46 +1,56 @@
 import fixture from '../packages/contracts/fixtures/api-key-credential.v1.json';
+import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
 import { describe, expect, it, vi } from 'vitest';
 import { BugDrop, BugDropServerError } from '../packages/server/src/index.js';
 
-const rotatedApiKey =
-  'bd_api_v1.AAECAwQFBgcICQoLDA0ODw.MDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk8';
 const response = {
   schemaVersion: 1 as const,
   token: 'opaque-capability',
   expiresAt: new Date(Date.now() + 4 * 60_000).toISOString(),
 };
+const binding = {
+  submissionId: bindingFixture.bound.submissionId,
+  payloadDigest: bindingFixture.bound.payloadDigest,
+};
 
 describe('@bugdrop/server', () => {
-  it('exchanges a subject using API-key-derived identity and no authority selectors', async () => {
+  it('creates an application-scoped token without an end-user identifier', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
 
-    await expect(
-      client.createSubmissionToken({
-        subject: fixture.subject,
-        origin: 'https://app.example.com',
-        environment: 'production',
-      })
-    ).resolves.toEqual(response);
+    await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
 
     const [url, init] = fetch.mock.calls[0]!;
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    expect(body).toEqual({
-      schemaVersion: 1,
-      subject: fixture.pseudonym,
-      origin: 'https://app.example.com',
-      environment: 'production',
-    });
+    expect(body).toEqual({ schemaVersion: 1, ...binding });
     expect(init?.headers).toMatchObject({
       Accept: 'application/vnd.bugdrop.submission-capability.v1+json',
       Authorization: fixture.authorization,
       'Content-Type': 'application/json',
       'X-BugDrop-Contract-Version': '1',
     });
-    expect(JSON.stringify({ url, init })).not.toContain(fixture.subject);
     expect(JSON.stringify({ url, init })).not.toContain(fixture.apiKey);
     expect(JSON.stringify({ url, init })).not.toContain(fixture.rootSecret);
     expect(init?.redirect).toBe('error');
+  });
+
+  it('sends optional Application context without adding user identity', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+
+    await client.createSubmissionToken({
+      ...binding,
+      origin: 'https://app.example.com',
+      environment: 'production',
+    });
+
+    const body = JSON.parse(String(fetch.mock.calls[0]![1]?.body)) as Record<string, unknown>;
+    expect(body).toEqual({
+      schemaVersion: 1,
+      ...binding,
+      origin: 'https://app.example.com',
+      environment: 'production',
+    });
   });
 
   it('rejects caller-supplied Application and repository authority before exchange', async () => {
@@ -48,7 +58,7 @@ describe('@bugdrop/server', () => {
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(
       client.createSubmissionToken({
-        subject: fixture.subject,
+        ...binding,
         ...({
           applicationId: 'app_public_other',
           repo: 'attacker/private',
@@ -60,22 +70,13 @@ describe('@bugdrop/server', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('uses different pseudonyms for the same subject under different API keys', async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockImplementation(() => Promise.resolve(Response.json(response)));
-    const firstClient = new BugDrop({ apiKey: fixture.apiKey, fetch });
-    const rotatedClient = new BugDrop({ apiKey: rotatedApiKey, fetch });
-
-    await firstClient.createSubmissionToken({ subject: fixture.subject });
-    await rotatedClient.createSubmissionToken({ subject: fixture.subject });
-
-    const firstBody = JSON.parse(String(fetch.mock.calls[0]![1]?.body)) as Record<string, unknown>;
-    const rotatedBody = JSON.parse(String(fetch.mock.calls[1]![1]?.body)) as Record<
-      string,
-      unknown
-    >;
-    expect(firstBody.subject).not.toBe(rotatedBody.subject);
+  it('rejects end-user identity fields before exchange', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+    await expect(
+      client.createSubmissionToken({ ...binding, subject: 'customer-user-42' } as never)
+    ).rejects.toThrow('unsupported fields');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('does not expose the configured API key through properties or serialization', () => {
@@ -87,7 +88,7 @@ describe('@bugdrop/server', () => {
   });
 
   it('redacts remote response bodies and network errors', async () => {
-    const reflected = `${fixture.apiKey} ${fixture.rootSecret} ${fixture.subject} opaque-capability-from-error`;
+    const reflected = `${fixture.apiKey} ${fixture.rootSecret} opaque-capability-from-error`;
     const rejectedFetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValue(new Response(reflected, { status: 401 }));
@@ -95,7 +96,7 @@ describe('@bugdrop/server', () => {
 
     let thrown: unknown;
     try {
-      await client.createSubmissionToken({ subject: fixture.subject });
+      await client.createSubmissionToken(binding);
     } catch (error) {
       thrown = error;
     }
@@ -103,21 +104,16 @@ describe('@bugdrop/server', () => {
     expect(thrown).toMatchObject({ code: 'request_failed', status: 401 });
     expect(JSON.stringify(thrown)).not.toContain(fixture.apiKey);
     expect(JSON.stringify(thrown)).not.toContain(fixture.rootSecret);
-    expect(String(thrown)).not.toContain(fixture.subject);
     expect(String(thrown)).not.toContain('opaque-capability-from-error');
 
     const networkClient = new BugDrop({
       apiKey: fixture.apiKey,
       fetch: vi.fn(() => Promise.reject(new Error(reflected))),
     });
-    await expect(
-      networkClient.createSubmissionToken({ subject: fixture.subject })
-    ).rejects.toMatchObject({
+    await expect(networkClient.createSubmissionToken(binding)).rejects.toMatchObject({
       code: 'request_failed',
     });
-    await expect(
-      networkClient.createSubmissionToken({ subject: fixture.subject })
-    ).rejects.not.toThrow(reflected);
+    await expect(networkClient.createSubmissionToken(binding)).rejects.not.toThrow(reflected);
   });
 
   it('rejects insecure or credential-bearing endpoints', () => {
@@ -142,7 +138,7 @@ describe('@bugdrop/server', () => {
       apiKey: fixture.apiKey,
       fetch: vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(overlong)),
     });
-    await expect(client.createSubmissionToken({ subject: fixture.subject })).rejects.toMatchObject({
+    await expect(client.createSubmissionToken(binding)).rejects.toMatchObject({
       code: 'invalid_response',
     });
   });
@@ -156,15 +152,21 @@ describe('@bugdrop/server input validation', () => {
     }
   );
 
-  it('rejects invalid operation objects', async () => {
+  it('requires a complete submission binding', async () => {
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch: vi.fn() });
-    await expect(client.createSubmissionToken(null as never)).rejects.toThrow('options object');
+    await expect(client.createSubmissionToken(undefined as never)).rejects.toThrow(
+      'options object'
+    );
+    await expect(client.createSubmissionToken({} as never)).rejects.toThrow('submissionId');
   });
 
   it.each([
-    [{ subject: fixture.subject, origin: 'not a URL' }, 'origin'],
-    [{ subject: fixture.subject, origin: 'https://example.com/path' }, 'origin'],
-    [{ subject: fixture.subject, environment: 'bad environment!' }, 'environment'],
+    [{ ...binding, origin: 'not a URL' }, 'origin'],
+    [{ ...binding, origin: 'https://example.com/path' }, 'origin'],
+    [{ ...binding, environment: 'bad environment!' }, 'environment'],
+    [{ ...binding, submissionId: '' }, 'submissionId'],
+    [{ ...binding, payloadDigest: `${binding.payloadDigest}=` }, 'payloadDigest'],
+    [{ ...binding, payloadDigest: binding.payloadDigest.slice(0, -1) }, 'payloadDigest'],
   ])('rejects malformed exchange option %#', async (options, message) => {
     const fetch = vi.fn<typeof globalThis.fetch>();
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
@@ -191,13 +193,11 @@ describe('@bugdrop/server input validation', () => {
       endpoint: 'http://sdk.localhost/v1/submission-capabilities',
       fetch,
     });
-    await expect(client.createSubmissionToken({ subject: fixture.subject })).resolves.toEqual(
-      response
-    );
+    await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
   });
 
   it('wraps malformed successful responses without exposing their contents', async () => {
-    const reflected = `${fixture.apiKey}-${fixture.subject}`;
+    const reflected = `${fixture.apiKey}-opaque-capability-from-error`;
     const client = new BugDrop({
       apiKey: fixture.apiKey,
       fetch: vi
@@ -206,7 +206,7 @@ describe('@bugdrop/server input validation', () => {
     });
     let thrown: unknown;
     try {
-      await client.createSubmissionToken({ subject: fixture.subject });
+      await client.createSubmissionToken(binding);
     } catch (error) {
       thrown = error;
     }

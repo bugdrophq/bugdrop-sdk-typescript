@@ -1,11 +1,13 @@
 import {
   BUGDROP_CAPABILITY_MEDIA_TYPE,
   BUGDROP_CONTRACT_VERSION,
+  parseSubmissionBinding,
   parseUsableSubmissionCapability,
   type SubmissionCapability,
   type SubmissionCapabilityRequest,
+  type SubmissionBinding,
 } from '../../contracts/src/index.js';
-import { createApiKeyStrategy, type CapabilityIdentityStrategy } from './api-key.js';
+import { createApiKeyAuthenticator, type CapabilityRequestAuthenticator } from './api-key.js';
 
 const DEFAULT_CAPABILITY_ENDPOINT =
   'https://bugdrop.neonwatty.workers.dev/v1/submission-capabilities';
@@ -20,8 +22,7 @@ export interface BugDropServerOptions {
   fetch?: typeof globalThis.fetch;
 }
 
-export interface CreateSubmissionTokenOptions {
-  subject: string;
+export interface CreateSubmissionTokenOptions extends SubmissionBinding {
   origin?: string;
   environment?: string;
   signal?: AbortSignal;
@@ -44,7 +45,7 @@ export class BugDropServerError extends Error {
 }
 
 export class BugDrop {
-  readonly #identityStrategy: CapabilityIdentityStrategy;
+  readonly #authenticator: CapabilityRequestAuthenticator;
   readonly #endpoint: string;
   readonly #timeoutMs: number;
   readonly #fetch: typeof globalThis.fetch;
@@ -54,7 +55,7 @@ export class BugDrop {
     if (!options || typeof options !== 'object') {
       throw new TypeError('BugDrop requires an options object');
     }
-    this.#identityStrategy = createApiKeyStrategy(options.apiKey);
+    this.#authenticator = createApiKeyAuthenticator(options.apiKey);
     this.#endpoint = validateEndpoint(options.endpoint ?? DEFAULT_CAPABILITY_ENDPOINT);
     this.#timeoutMs = validateTimeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     this.#fetch = options.fetch ?? globalThis.fetch;
@@ -70,10 +71,9 @@ export class BugDrop {
     if (!options || typeof options !== 'object') {
       throw new TypeError('createSubmissionToken requires an options object');
     }
-    const identity = this.#identityStrategy.prepareIdentity(options.subject);
-    const requestBody = createRequestBody(options, identity.wireSubject);
+    const requestBody = createRequestBody(options);
     const body = JSON.stringify(requestBody);
-    const authenticationHeaders = await identity.authenticateRequest({
+    const authenticationHeaders = await this.#authenticator.authenticateRequest({
       method: 'POST',
       url: this.#endpoint,
       body,
@@ -130,17 +130,18 @@ export class BugDrop {
   }
 }
 
-function createRequestBody(
-  options: CreateSubmissionTokenOptions,
-  wireSubject: string
-): SubmissionCapabilityRequest {
+function createRequestBody(options: CreateSubmissionTokenOptions): SubmissionCapabilityRequest {
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSubmissionToken requires an options object');
   }
-  assertOnlyKeys(options, ['subject', 'origin', 'environment', 'signal']);
+  assertOnlyKeys(options, ['submissionId', 'payloadDigest', 'origin', 'environment', 'signal']);
+  const binding = parseSubmissionBinding({
+    submissionId: options.submissionId,
+    payloadDigest: options.payloadDigest,
+  });
   const body: SubmissionCapabilityRequest = {
     schemaVersion: BUGDROP_CONTRACT_VERSION,
-    subject: wireSubject,
+    ...binding,
   };
   if (options.origin !== undefined) body.origin = validateOrigin(options.origin);
   if (options.environment !== undefined) {

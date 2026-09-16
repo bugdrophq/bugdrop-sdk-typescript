@@ -8,8 +8,8 @@
   tests here.
 - `@bugdrop/browser` is a loader/controller. Never copy the hosted widget implementation into this
   repository.
-- `@bugdrop/server` is server-only. Never introduce server credentials, raw subjects, repository
-  selectors, labels, or privileged flow configuration into the browser package.
+- `@bugdrop/server` is server-only. Never introduce server credentials, customer user identifiers,
+  repository selectors, labels, or privileged flow configuration into the browser package.
 
 ## Changes
 
