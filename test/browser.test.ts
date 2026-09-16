@@ -111,7 +111,7 @@ describe('@bugdrop/browser', () => {
     expect(document.querySelector('script')).toBeNull();
   });
 
-  it('does not attach to a pre-existing legacy widget', async () => {
+  it('does not attach to a pre-existing widget', async () => {
     window.BugDrop = createWidgetApi([]);
     const { BugDrop } = await import('../packages/browser/src/index.js');
     expect(() =>

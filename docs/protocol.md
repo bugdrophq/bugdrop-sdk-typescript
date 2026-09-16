@@ -33,7 +33,7 @@ authoritative capability service MUST consume this same vector before claiming V
 The managed production endpoint is
 `https://api.bugdrop.dev/v1/submission-capabilities`. Clients may use an explicit override for
 staging, loopback development, a customer-controlled proxy, or a supported self-hosted deployment.
-They MUST NOT fall back to an anonymous or legacy endpoint after a managed request fails.
+They MUST NOT fall back to an current public endpoint after a managed request fails.
 
 Headers:
 
@@ -147,3 +147,18 @@ submission receipt consumption before delivery, expiry and revocation enforcemen
 retry after ambiguous delivery, as required by the approved control-plane proposal. Local SDK tests
 and mocks do not satisfy these service gates. No service deployment or package publication is
 included in this tranche.
+
+## Local packed-consumer conformance
+
+The [packed SDK integration harness](integration.md) installs built npm tarballs and uses only public
+package exports. Its authoritative-service dependency is the Cloudflare repository's
+`managed/local/adapter.mjs`. That local test adapter accepts the existing V1 capability envelope,
+submission binding, and exact request-body bytes, and exposes content-free evidence plus local
+revocation/failure controls. The adapter is coordinated with the service owner; it does not define
+or imply a published managed-submission HTTP route or change the six V1 wire fixtures.
+
+The independent service run proves local issuer/verifier/receipt interoperability with fake GitHub
+delivery. The SDK-only transport fixture and browser controller double do not satisfy that proof or
+the real hosted-widget publication gate. The tested service revision and result belong in the
+integration PR evidence so that an external implementation change cannot silently redefine the
+contract.

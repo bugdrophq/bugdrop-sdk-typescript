@@ -3,7 +3,8 @@
   "workspaces": {
     ".": {
       "entry": ["scripts/*.mjs", "vitest.config.ts"],
-      "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}"]
+      "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}"],
+      "ignoreDependencies": ["@bugdrop/server"]
     },
     "packages/browser": {
       "entry": ["src/index.ts"],

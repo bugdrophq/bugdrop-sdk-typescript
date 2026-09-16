@@ -32,7 +32,7 @@ platform-level protections.
 The default endpoint is the versioned managed service at
 `https://api.bugdrop.dev/v1/submission-capabilities`. `endpoint` and `fetch` constructor options
 exist for staging, loopback development, customer-controlled proxies, self-hosting, and contract
-tests. There is no legacy fallback. Do not point an override at an untrusted service because the
+tests. There is no fallback to the current public service. Do not point an override at an untrusted service because the
 request carries a derived Authorization bearer.
 
 `origin`, when supplied, must be one exact canonical HTTPS origin. HTTP is accepted only for

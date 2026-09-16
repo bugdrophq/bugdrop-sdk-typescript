@@ -64,6 +64,9 @@ jobs:
       - name: Build and disprove browser-boundary regressions
         run: npm run test:security
 
+      - name: Exercise packed SDK consumer exports
+        run: node scripts/integration.mjs
+
       - name: Verify publishable package contents
         run: npm run pack:check
 
