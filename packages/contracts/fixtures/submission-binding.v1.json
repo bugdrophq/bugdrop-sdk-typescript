@@ -29,11 +29,24 @@
       "submissionId": "018f1f2e-7b4a-7c3d-9e10-4f5a6b7c8d91",
       "requestBody": "{\"message\":\"Save failed\",\"page\":\"/settings\"}",
       "accepted": false
+    },
+    {
+      "name": "trailing newline",
+      "submissionId": "018f1f2e-7b4a-7c3d-9e10-4f5a6b7c8d90",
+      "requestBody": "{\"message\":\"Save failed\",\"page\":\"/settings\"}\n",
+      "accepted": false
+    },
+    {
+      "name": "alternate Unicode escaping",
+      "submissionId": "018f1f2e-7b4a-7c3d-9e10-4f5a6b7c8d90",
+      "requestBody": "{\"message\":\"\\u0053ave failed\",\"page\":\"/settings\"}",
+      "accepted": false
     }
   ],
   "invalidPayloadDigests": [
     "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbEQ=",
     "sPybYsPwrJsoR8G8LbuHwYw3y+QHlqrYOfI+8lbJbEQ=",
-    "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbE"
+    "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbE",
+    "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbER"
   ]
 }

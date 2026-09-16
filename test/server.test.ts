@@ -1,5 +1,7 @@
 import fixture from '../packages/contracts/fixtures/api-key-credential.v1.json';
 import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
+import originFixture from '../packages/contracts/fixtures/origin.v1.json';
+import serverPackage from '../packages/server/package.json';
 import { describe, expect, it, vi } from 'vitest';
 import { BugDrop, BugDropServerError } from '../packages/server/src/index.js';
 
@@ -22,12 +24,14 @@ describe('@bugdrop/server', () => {
 
     const [url, init] = fetch.mock.calls[0]!;
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    expect(url).toBe('https://api.bugdrop.dev/v1/submission-capabilities');
     expect(body).toEqual({ schemaVersion: 1, ...binding });
     expect(init?.headers).toMatchObject({
       Accept: 'application/vnd.bugdrop.submission-capability.v1+json',
       Authorization: fixture.authorization,
       'Content-Type': 'application/json',
       'X-BugDrop-Contract-Version': '1',
+      'X-BugDrop-SDK-Version': serverPackage.version,
     });
     expect(JSON.stringify({ url, init })).not.toContain(fixture.apiKey);
     expect(JSON.stringify({ url, init })).not.toContain(fixture.rootSecret);
@@ -162,7 +166,6 @@ describe('@bugdrop/server input validation', () => {
 
   it.each([
     [{ ...binding, origin: 'not a URL' }, 'origin'],
-    [{ ...binding, origin: 'https://example.com/path' }, 'origin'],
     [{ ...binding, environment: 'bad environment!' }, 'environment'],
     [{ ...binding, submissionId: '' }, 'submissionId'],
     [{ ...binding, payloadDigest: `${binding.payloadDigest}=` }, 'payloadDigest'],
@@ -171,6 +174,13 @@ describe('@bugdrop/server input validation', () => {
     const fetch = vi.fn<typeof globalThis.fetch>();
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(client.createSubmissionToken(options)).rejects.toThrow(message);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(originFixture.invalid)('rejects non-canonical origin %s', async (origin) => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+    await expect(client.createSubmissionToken({ ...binding, origin })).rejects.toThrow('origin');
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -194,6 +204,12 @@ describe('@bugdrop/server input validation', () => {
       fetch,
     });
     await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
+  });
+
+  it.each(originFixture.valid)('accepts canonical origin %s', async (origin) => {
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+    await expect(client.createSubmissionToken({ ...binding, origin })).resolves.toEqual(response);
   });
 
   it('wraps malformed successful responses without exposing their contents', async () => {

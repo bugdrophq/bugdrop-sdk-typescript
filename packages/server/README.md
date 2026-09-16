@@ -29,6 +29,13 @@ responsible for authenticating and suspending its users and for enforcing user-s
 BugDrop may independently apply Application-, credential-, network/IP-, replay-, payload-, and
 platform-level protections.
 
-`endpoint` and `fetch` constructor options exist for staging, contract tests, and the unfinished
-control-plane integration. Do not point them at an untrusted service because the request carries a
-derived Authorization bearer.
+The default endpoint is the versioned managed service at
+`https://api.bugdrop.dev/v1/submission-capabilities`. `endpoint` and `fetch` constructor options
+exist for staging, loopback development, customer-controlled proxies, self-hosting, and contract
+tests. There is no legacy fallback. Do not point an override at an untrusted service because the
+request carries a derived Authorization bearer.
+
+`origin`, when supplied, must be one exact canonical HTTPS origin. HTTP is accepted only for
+explicit loopback development hosts. See the repository [security contract](../../docs/security.md)
+and maintained [Next.js](../../docs/examples/nextjs-route.md) and
+[Express](../../docs/examples/express-route.md) endpoint examples.

@@ -1,3 +1,4 @@
+import validation from '../packages/contracts/fixtures/capability-validation.v1.json';
 import fixture from '../packages/contracts/fixtures/capability-response.v1.json';
 import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
 import { createHash } from 'node:crypto';
@@ -6,6 +7,7 @@ import {
   BUGDROP_CONTRACT_VERSION,
   parseSubmissionBinding,
   parseSubmissionCapability,
+  parseUsableSubmissionCapability,
 } from '../packages/contracts/src/index.js';
 
 describe('capability contract v1', () => {
@@ -20,6 +22,9 @@ describe('capability contract v1', () => {
     { ...fixture, schemaVersion: 2 },
     { ...fixture, token: '' },
     { ...fixture, expiresAt: 'tomorrow' },
+    { ...fixture, expiresAt: '2099-01-01T00:05:00Z' },
+    { ...fixture, expiresAt: '2099-01-01T00:05:00.000+00:00' },
+    { ...fixture, expiresAt: '2099-02-29T00:05:00.000Z' },
   ])('fails closed for malformed capabilities', (value) => {
     expect(() => parseSubmissionCapability(value)).toThrow('invalid capability response');
   });
@@ -75,3 +80,25 @@ describe('submission binding contract v1', () => {
 function digest(body: string): string {
   return createHash('sha256').update(body, 'utf8').digest('base64url');
 }
+
+describe('capability usability boundaries', () => {
+  it.each(validation.expirationCases)('checks $expiresAt', ({ expiresAt, accepted }) => {
+    const parse = () =>
+      parseUsableSubmissionCapability({ ...fixture, expiresAt }, Date.parse(validation.now));
+    if (accepted) expect(parse().expiresAt).toBe(expiresAt);
+    else expect(parse).toThrow('invalid capability response');
+  });
+  it.each([null, 1, '', 'x'.repeat(16_385)])('rejects invalid opaque token %#', (token) => {
+    expect(() => parseSubmissionCapability({ ...fixture, token })).toThrow(
+      'invalid capability response'
+    );
+  });
+  it.each(['é'.repeat(100), '😀'.repeat(50), ' é '])(
+    'preserves valid UTF-8 identifiers exactly %#',
+    (submissionId) => {
+      expect(parseSubmissionBinding({ ...bindingFixture.bound, submissionId }).submissionId).toBe(
+        submissionId
+      );
+    }
+  );
+});

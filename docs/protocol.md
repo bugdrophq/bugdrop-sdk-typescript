@@ -14,13 +14,26 @@ and `root` MUST decode to exactly 32 bytes. Non-canonical encodings and encoding
 rejected, not normalized. The derived authentication secret MUST also use canonical unpadded
 base64url. The complete API key and decoded root never cross the network.
 
+The credential issuer and capability service MUST use the same derivation. At issuance, the service
+stores the key ID and `HMAC-SHA-256(server_pepper, auth_secret)` plus non-secret lifecycle metadata;
+it MUST NOT store the root/API key, authentication secret, or complete bearer. For a request, the
+service parses the canonical `bd_auth_v1` bearer, decodes the authentication secret, applies the
+server-pepper HMAC, and compares the result in constant time. Verification against the root/API key
+is not a valid V1 implementation because that value never crosses the network.
+
 The compatibility vector is
 [`packages/contracts/fixtures/api-key-credential.v1.json`](../packages/contracts/fixtures/api-key-credential.v1.json).
-It is a non-production byte-level contract fixture, not a usable credential.
+It is a non-production byte-level contract fixture, not a usable credential. Both the SDK and the
+authoritative capability service MUST consume this same vector before claiming V1 compatibility.
 
 ## Capability exchange request
 
 `POST /v1/submission-capabilities`
+
+The managed production endpoint is
+`https://api.bugdrop.dev/v1/submission-capabilities`. Clients may use an explicit override for
+staging, loopback development, a customer-controlled proxy, or a supported self-hosted deployment.
+They MUST NOT fall back to an anonymous or legacy endpoint after a managed request fails.
 
 Headers:
 
@@ -28,6 +41,7 @@ Headers:
 - `Content-Type: application/json`
 - `Accept: application/vnd.bugdrop.submission-capability.v1+json`
 - `X-BugDrop-Contract-Version: 1`
+- `X-BugDrop-SDK-Version: <installed @bugdrop/server package version>`
 
 Body:
 
@@ -50,7 +64,14 @@ object: alternate property order, whitespace, Unicode escaping, line endings, or
 change produces a different binding. Standard base64, padding, aliases, and wrong-length values are
 rejected rather than normalized.
 
-The optional `origin` and `environment` fields may narrow a capability. The client rejects
+The optional `origin` and `environment` fields may narrow a capability. `origin` MUST be one exact,
+canonical URL origin: HTTPS in deployed environments, or HTTP only for an explicit loopback host
+such as `localhost`, a `.localhost` name, `127.0.0.1`, or `[::1]`. Paths, queries, fragments,
+credentials, public HTTP origins, and non-HTTP schemes are rejected. The client rejects
+trailing-dot hostnames, default-port aliases, hostname case aliases, and other spellings whose
+serialized origin differs from the supplied value. The shared positive and negative vectors are in
+[`packages/contracts/fixtures/origin.v1.json`](../packages/contracts/fixtures/origin.v1.json); the
+SDK and authoritative capability service MUST consume the same fixture. The client rejects
 unexpected caller fields rather than forwarding them. In particular, no Application ID,
 repository, installation, labels, flow permissions, or customer user identifiers are accepted by
 this operation. Authentication identifies the Application credential only.
@@ -78,10 +99,51 @@ vectors are in
 ```
 
 The browser treats `token` as opaque, keeps it only in the call stack, rejects an expired response
-or a response with more than five minutes remaining, and passes the token to the hosted widget's
+or a response with more than five minutes remaining outside a 30-second clock-skew allowance, and
+passes the token to the hosted widget's
 bearer-token provider hook. The hook accepts the submission binding used to request that token. The
 browser package does not decode, persist, log, or place the token in a URL.
+
+`expiresAt` MUST use the one canonical UTC representation `YYYY-MM-DDTHH:mm:ss.sssZ`. RFC 3339
+offsets, omitted millisecond precision, expanded years, and impossible calendar dates are rejected
+rather than normalized.
 
 Fixtures in `packages/contracts/fixtures` are compatibility inputs, not signing examples or usable
 credentials. The authoritative service repository must consume the same vector before V1 is claimed
 as end-to-end supported.
+
+## Stage 0 reconciliation and publication gate
+
+This tranche was cross-checked against the 2026-09-16 decision-complete
+`bugdrop-web/docs/account-control-plane-data-layer-proposal.md`, particularly approved decisions
+5, 6, 8, and 9 and the Stage 3 SDK publication gate. The SDK contract implements the customer-side
+exchange only. It cannot prove managed ingress, receipt consumption, edge revocation, or private
+Cloudflare delivery behavior. Those remain service-side conformance requirements, not SDK features.
+
+Before SDK publication, the authoritative Cloudflare implementation MUST consume these versioned
+inputs in its own CI against its actual issuer, verifier, ingress, and hosted-widget implementation:
+
+- `api-key-credential.v1.json`: derive the exact bearer from the valid API key; reject every
+  `invalidApiKeys` value at the credential parser and every `invalidAuthorizations` value at the
+  bearer parser. Store and verify the peppered authentication-secret HMAC, never the API-key root.
+- `origin.v1.json`: accept every `valid` origin exactly and reject every `invalid` spelling.
+  Also reject a valid origin that is not the Application's configured origin; syntax alone is not
+  authorization.
+- `submission-binding.v1.json`: accept the exact binding and reject all negative verification
+  cases and invalid digest encodings. Hash received bytes before parsing; preserve the submission
+  ID exactly. Changing serialization, a body byte, or the ID must prevent delivery.
+- `capability-response.v1.json` and `capability-validation.v1.json`: emit the V1 envelope and
+  canonical UTC timestamps; exercise the client's five-minute lifetime and 30-second skew boundary
+  cases relative to the fixture's `now`. These response checks do not replace signed-token expiry
+  verification at ingress. The future-dated fixture is not a live capability.
+- `widget-public-api.v1.json`: exercise the hosted controller and binding-aware token-provider hook
+  with the browser loader. A failed capability exchange must never invoke anonymous public ingress.
+
+A production-like end-to-end exchange must additionally demonstrate both installed SDK versions in
+allowlisted operational evidence; absence of API keys, roots, end-user identities, and stable
+reporter pseudonyms from browser inputs and service telemetry; and normalized errors without secret
+or payload reflection. The service must prove cross-Application/tenant replay rejection, durable
+submission receipt consumption before delivery, expiry and revocation enforcement, and no automatic
+retry after ambiguous delivery, as required by the approved control-plane proposal. Local SDK tests
+and mocks do not satisfy these service gates. No service deployment or package publication is
+included in this tranche.

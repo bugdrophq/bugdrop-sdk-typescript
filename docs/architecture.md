@@ -36,13 +36,16 @@ payloadDigest }` through the installed provider to customer code, which requests
 its backend using `@bugdrop/server`. The managed ingress Worker later verifies that the same ID and
 the SHA-256 digest of the received raw body bytes match the capability before parsing or delivery.
 
-## Future control-plane seam
+## Managed production endpoints
 
-The default endpoint is a provisional `v1/submission-capabilities` URL on the current BugDrop
-service origin. Tests inject a `fetch` implementation and never require that unfinished endpoint.
-The `endpoint` constructor option permits staging and compatibility testing without changing the
-public operation. Before release, the authoritative service repository must confirm the final URL
-and run the shared fixtures against the deployed implementation.
+The server package defaults to
+`https://api.bugdrop.dev/v1/submission-capabilities`. The browser package defaults to the versioned
+managed widget at `https://widget.bugdrop.dev/widget.v1.js`. Tests inject a `fetch` implementation
+and never depend on either deployed service. Explicit URL overrides permit staging, loopback
+development, customer-controlled proxies, and future supported self-hosting without changing the
+public operation. The SDK never retries against the anonymous legacy Worker. Do not publish the
+packages until both managed endpoints exist and the authoritative service repository passes the
+shared contract fixtures against them.
 
 The existing hosted widget is authoritative, and direct script-tag installation remains a
 first-class supported method. The SDK is an additional installation and controller method. The
@@ -60,7 +63,7 @@ customer's authenticated token endpoint returns the complete versioned capabilit
 {
   "schemaVersion": 1,
   "token": "<opaque short-lived capability>",
-  "expiresAt": "<RFC 3339 timestamp>"
+  "expiresAt": "2026-09-13T20:05:00.000Z"
 }
 ```
 
@@ -68,4 +71,6 @@ The named global identified by `data-auth-token-provider` accepts the hosted wid
 binding, fetches that response, extracts it, and returns only its opaque `token` string to the
 widget. The widget does not receive the API key, a customer user identifier, or the complete
 capability response object. The endpoint must remain authenticated, same-origin, and
-CSRF-protected.
+CSRF-protected when the customer application requires a signed-in reporter. Anonymous customer
+applications still own their own access and abuse policy and must enforce the origin, no-cache,
+payload-binding, and rate-limit requirements in the security contract.

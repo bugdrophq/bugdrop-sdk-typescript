@@ -1,3 +1,4 @@
+import packageMetadata from '../package.json';
 import {
   BUGDROP_CAPABILITY_MEDIA_TYPE,
   BUGDROP_CONTRACT_VERSION,
@@ -9,9 +10,9 @@ import {
 } from '../../contracts/src/index.js';
 import { createApiKeyAuthenticator, type CapabilityRequestAuthenticator } from './api-key.js';
 
-const DEFAULT_CAPABILITY_ENDPOINT =
-  'https://bugdrop.neonwatty.workers.dev/v1/submission-capabilities';
+const DEFAULT_CAPABILITY_ENDPOINT = 'https://api.bugdrop.dev/v1/submission-capabilities';
 const DEFAULT_TIMEOUT_MS = 10_000;
+const SDK_VERSION = packageMetadata.version;
 
 assertServerRuntime();
 
@@ -91,6 +92,7 @@ export class BugDrop {
           Accept: BUGDROP_CAPABILITY_MEDIA_TYPE,
           'Content-Type': 'application/json',
           'X-BugDrop-Contract-Version': String(BUGDROP_CONTRACT_VERSION),
+          'X-BugDrop-SDK-Version': SDK_VERSION,
           ...authenticationHeaders,
         },
         body,
@@ -163,8 +165,14 @@ function validateOrigin(value: string): string {
   } catch {
     throw new TypeError('origin must be a valid URL origin');
   }
-  if (url.origin !== value || url.username || url.password) {
-    throw new TypeError('origin must contain only a URL origin');
+  if (
+    url.origin !== value ||
+    url.hostname.endsWith('.') ||
+    url.username ||
+    url.password ||
+    (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLoopbackHost(url.hostname)))
+  ) {
+    throw new TypeError('origin must be an exact HTTPS origin or HTTP loopback origin');
   }
   return url.origin;
 }
@@ -183,7 +191,7 @@ function validateEndpoint(value: string): string {
   } catch {
     throw new TypeError('endpoint must be a valid URL');
   }
-  const localDevelopment = url.hostname === 'localhost' || url.hostname.endsWith('.localhost');
+  const localDevelopment = isLoopbackHost(url.hostname);
   if (
     (url.protocol !== 'https:' && !(localDevelopment && url.protocol === 'http:')) ||
     url.username ||
@@ -195,6 +203,15 @@ function validateEndpoint(value: string): string {
     throw new TypeError('endpoint must not include a query string or fragment');
   }
   return url.href;
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === '127.0.0.1' ||
+    hostname === '[::1]'
+  );
 }
 
 function validateTimeout(value: number): number {

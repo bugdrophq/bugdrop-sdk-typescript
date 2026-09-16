@@ -15,7 +15,17 @@ describe('V1 API-key authenticator', () => {
     });
   });
 
+  it('sends only the derived authentication secret, never the root API key', async () => {
+    const authentication = createApiKeyAuthenticator(fixture.apiKey);
+    const headers = await authentication.authenticateRequest(request);
+
+    expect(headers.Authorization).toBe(`Bearer bd_auth_v1.${fixture.keyId}.${fixture.authSecret}`);
+    expect(headers.Authorization).not.toContain(fixture.rootSecret);
+    expect(headers.Authorization).not.toContain(fixture.apiKey);
+  });
+
   it.each([
+    ...fixture.invalidApiKeys,
     undefined,
     '',
     ` ${fixture.apiKey}`,
