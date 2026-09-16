@@ -36,7 +36,10 @@ this adapter is not a published submission HTTP route. No service wire fields ar
 Each failure scenario starts a fresh local service. Tests require exact normalized outcome objects,
 verify changed-body and submission-ID rejection, tampered-capability rejection, revoked/stale
 projection rejection, and at most one delivery attempt after replay or an indeterminate result.
-Evidence is checked for report, credential, token, and identity canaries. Content-free evidence
+Evidence is checked for report, credential, token, and identity canaries. Test-owned observations
+of actual telemetry requests must contain only the SDK version and fixed transport headers; raw
+submission responses must exactly match the normalized outcomes. Negative evidence mutations prove
+that extra headers, response fields, private canaries, and concealed outcomes fail the assertions. Content-free evidence
 must not include report bodies, page URLs, raw headers, or reporter identifiers.
 
 The current public system remains supported and unchanged. The transport fixture's deliberately

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { assertPrivateEvidence } from './evidence-checks.mjs';
 import { loadBrowser } from './packed-consumer.mjs';
 
 const outcomes = ['delivered', 'delivering', 'indeterminate', 'failed_before_delivery', 'rejected'];
@@ -8,29 +9,6 @@ function assertOutcome(value, expected) {
   assert.equal(value.schemaVersion, 1);
   assert.ok(outcomes.includes(value.outcome));
   assert.equal(value.outcome, expected);
-}
-
-function assertPrivate(evidence, fixtures, capability) {
-  const serialized = JSON.stringify(evidence);
-  const credential = fixtures['api-key-credential'];
-  const body = fixtures['submission-binding'].requestBody;
-  for (const canary of [
-    credential.apiKey,
-    credential.rootSecret,
-    credential.authorization,
-    credential.authSecret,
-    capability.token,
-    body,
-    'Save failed',
-    '/settings',
-    'identity-canary',
-  ]) {
-    assert.ok(!serialized.includes(canary), 'Service evidence leaked a private canary');
-  }
-  assert.doesNotMatch(
-    serialized,
-    /"(?:userId|subject|reporterId|pseudonym|headers|payload|requestBody)"\s*:/
-  );
 }
 
 export async function checkService(consumer, fixtures, start) {
@@ -84,7 +62,7 @@ export async function checkService(consumer, fixtures, start) {
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Replay caused a second delivery attempt');
     assert.deepEqual(evidence.sdkVersions, [consumer.versions.server]);
-    assertPrivate(evidence, fixtures, capability);
+    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server);
   });
   await scenario(async (service, client) => {
     const wrongOrigin =
@@ -106,7 +84,7 @@ export async function checkService(consumer, fixtures, start) {
       'rejected'
     );
     assert.equal((await service.evidence()).attempts, 0);
-    assertPrivate(await service.evidence(), fixtures, capability);
+    assertPrivateEvidence(await service.evidence(), fixtures, capability, consumer.versions.server);
   });
   for (const vector of fixture.verificationCases.filter((value) => !value.accepted)) {
     await scenario(async (service, client) => {
@@ -119,7 +97,12 @@ export async function checkService(consumer, fixtures, start) {
         'rejected'
       );
       assert.equal((await service.evidence()).attempts, 0);
-      assertPrivate(await service.evidence(), fixtures, capability);
+      assertPrivateEvidence(
+        await service.evidence(),
+        fixtures,
+        capability,
+        consumer.versions.server
+      );
     });
   }
   for (const control of ['revoke', 'expireAuthorizationState']) {
@@ -129,7 +112,12 @@ export async function checkService(consumer, fixtures, start) {
       await assert.rejects(authorize(service, client), { code: 'request_failed' });
       assertOutcome(await submit(service, capability), 'rejected');
       assert.equal((await service.evidence()).attempts, 0);
-      assertPrivate(await service.evidence(), fixtures, capability);
+      assertPrivateEvidence(
+        await service.evidence(),
+        fixtures,
+        capability,
+        consumer.versions.server
+      );
     });
   }
   await scenario(async (service, client) => {
@@ -139,6 +127,6 @@ export async function checkService(consumer, fixtures, start) {
     assertOutcome(await submit(service, capability), 'indeterminate');
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Indeterminate outcome retried delivery');
-    assertPrivate(evidence, fixtures, capability);
+    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server);
   });
 }
