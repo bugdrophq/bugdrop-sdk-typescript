@@ -1,19 +1,31 @@
-# Security guidance
+# Capability-endpoint security contract
 
 BugDrop authenticates Applications, not the people using customer applications. The SDK does not
-send BugDrop a customer user identifier. The endpoint that calls `createSubmissionToken` must apply
-the customer's own authentication, authorization, suspension, and abuse controls. It must be an
-authenticated same-origin endpoint with the CSRF protection required by the customer's framework.
-A public endpoint that returns capabilities provides no user-level security.
+send BugDrop a customer user identifier. The customer decides whether its reporters must sign in and
+owns all user authentication, authorization, suspension, and user-specific abuse controls. A public
+customer endpoint that returns capabilities provides no user-level security; BugDrop cannot add that
+security because it deliberately receives no stable end-user identifier.
 
-Apply the same protections you use for other state-changing same-origin endpoints:
+Every customer capability endpoint MUST:
 
-- require the current authenticated session;
-- reject cross-origin requests and validate CSRF tokens where your framework requires them;
-- do not put the endpoint behind a cache or CDN response cache;
-- enforce user-specific and network limits in the customer application;
-- reject submission IDs reused for a different logical submission;
-- return the capability only to the authenticated request that caused its creation.
+- keep `BUGDROP_API_KEY` in server-only configuration and call `@bugdrop/server` only on the server;
+- accept only `POST` with a small JSON body containing `submissionId` and `payloadDigest`;
+- compare the request `Origin` to an exact customer-owned allowlist before issuing a capability;
+- return `Cache-Control: no-store` and prevent CDN or application response caching;
+- forward the exact binding supplied by the hosted widget without deriving either value from a user;
+- reject a submission ID reused for a different logical submission;
+- return normalized errors without remote bodies, tokens, headers, stack locals, or binding values;
+- avoid logging the API key, derived bearer, capability, submission ID, digest, or response body; and
+- apply application/network safety limits plus any user-specific controls required by the customer.
+
+The server SDK sends its package version in `X-BugDrop-SDK-Version`, and the browser loader exposes
+its package version to the hosted widget as `data-sdk-version`. These values support compatibility
+and delivery diagnostics; they contain no customer or reporter identifier.
+
+If the endpoint uses cookies or requires a signed-in reporter, it MUST also validate the current
+session and apply the framework's normal CSRF defense. SameSite cookies alone are not a substitute
+for an exact `Origin` check. Anonymous customer applications remain responsible for deciding who can
+reach the endpoint and for containing abuse before requesting shared Application capabilities.
 
 Never use public framework prefixes for `BUGDROP_API_KEY`, including `NEXT_PUBLIC_` or `VITE_`.
 Keep it in a server-only secret store. The browser package has no API-key option and does not import
@@ -34,3 +46,8 @@ delivery. Any mismatch fails closed; parsing and reserializing JSON is not an eq
 Errors intentionally exclude remote response bodies and network exception details because those
 systems sometimes echo authorization material. Use the error code and HTTP status for operational
 diagnostics.
+
+Reference implementations are maintained for [Next.js](examples/nextjs-route.md) and
+[Express](examples/express-route.md). They show the protocol boundary, not a universal user-auth or
+rate-limiting system; replace the marked customer-policy hooks with controls appropriate to the
+application.

@@ -20,6 +20,9 @@ describe('capability contract v1', () => {
     { ...fixture, schemaVersion: 2 },
     { ...fixture, token: '' },
     { ...fixture, expiresAt: 'tomorrow' },
+    { ...fixture, expiresAt: '2099-01-01T00:05:00Z' },
+    { ...fixture, expiresAt: '2099-01-01T00:05:00.000+00:00' },
+    { ...fixture, expiresAt: '2099-02-29T00:05:00.000Z' },
   ])('fails closed for malformed capabilities', (value) => {
     expect(() => parseSubmissionCapability(value)).toThrow('invalid capability response');
   });

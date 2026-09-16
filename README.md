@@ -29,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
   await requireAuthorizedUser(request); // application-owned access control
   const { submissionId, payloadDigest } = await request.json();
   const capability = await bugdrop.createSubmissionToken({ submissionId, payloadDigest });
-  return Response.json(capability);
+  return Response.json(capability, { headers: { 'Cache-Control': 'no-store' } });
 }
 ```
 
@@ -58,6 +58,10 @@ BugDrop.init({
 Do not accept repository, installation, labels, flow permissions, or origin overrides from the
 browser. Those values are resolved from the Application on BugDrop's servers.
 
+The packages default to BugDrop's versioned managed endpoints at `api.bugdrop.dev` and
+`widget.bugdrop.dev`. Endpoint overrides exist only for explicit staging, local development,
+customer proxies, and future self-hosting; the SDK never falls back to the anonymous legacy service.
+
 The SDK derives an Application authentication bearer from the API key and never sends the complete
 key or its root secret to BugDrop. The capability request contains no customer user identifier.
 BugDrop may enforce protections at the Application, credential, network/IP, replay, payload, and
@@ -80,4 +84,6 @@ npm run validate
 ```
 
 No command in this repository publishes or deploys packages. See [architecture](docs/architecture.md),
-[protocol](docs/protocol.md), and the package-specific READMEs for details.
+[protocol](docs/protocol.md), [security contract](docs/security.md), and the
+[Next.js](docs/examples/nextjs-route.md) and [Express](docs/examples/express-route.md) endpoint
+examples for details.

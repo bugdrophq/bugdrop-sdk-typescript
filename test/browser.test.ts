@@ -2,6 +2,7 @@
 
 import widgetApiFixture from '../packages/contracts/fixtures/widget-public-api.v1.json';
 import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
+import browserPackage from '../packages/browser/package.json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capability = {
@@ -35,9 +36,10 @@ describe('@bugdrop/browser', () => {
 
     const script = document.querySelector<HTMLScriptElement>('script');
     expect(script).not.toBeNull();
-    expect(script!.src).toBe('https://bugdrop.neonwatty.workers.dev/widget.v1.js');
+    expect(script!.src).toBe('https://widget.bugdrop.dev/widget.v1.js');
     expect(script!.dataset.applicationId).toBe('app_public_123');
     expect(script!.dataset.contractVersion).toBe('1');
+    expect(script!.dataset.sdkVersion).toBe(browserPackage.version);
     expect(script!.dataset.repo).toBeUndefined();
     expect(script!.dataset.categoryLabels).toBeUndefined();
     expect(script!.dataset.flow).toBeUndefined();
@@ -203,19 +205,22 @@ describe('@bugdrop/browser failure handling', () => {
     expect(document.querySelector('script')).toBeNull();
   });
 
-  it.each(['not a URL', 'http://example.com/widget.js', 'https://user:pass@example.com/widget.js'])(
-    'rejects unsafe widget URL %s',
-    async (widgetUrl) => {
-      const { BugDrop } = await import('../packages/browser/src/index.js');
-      expect(() =>
-        BugDrop.init({
-          applicationId: 'app_public_123',
-          tokenProvider: async () => capability,
-          widgetUrl,
-        })
-      ).toThrow(/valid URL|HTTPS/);
-    }
-  );
+  it.each([
+    'not a URL',
+    'http://example.com/widget.js',
+    'https://user:pass@example.com/widget.js',
+    'https://widget.bugdrop.dev/widget.v1.js?token=secret',
+    'https://widget.bugdrop.dev/widget.v1.js#fragment',
+  ])('rejects unsafe widget URL %s', async (widgetUrl) => {
+    const { BugDrop } = await import('../packages/browser/src/index.js');
+    expect(() =>
+      BugDrop.init({
+        applicationId: 'app_public_123',
+        tokenProvider: async () => capability,
+        widgetUrl,
+      })
+    ).toThrow(/valid URL|HTTPS|query string/);
+  });
 
   it('redacts malformed and overlong capability details', async () => {
     const secretToken = 'capability-that-must-not-leak';

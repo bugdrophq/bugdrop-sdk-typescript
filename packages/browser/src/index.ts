@@ -6,8 +6,9 @@ import {
   type SubmissionBinding,
 } from '../../contracts/src/index.js';
 
-const DEFAULT_WIDGET_URL = 'https://bugdrop.neonwatty.workers.dev/widget.v1.js';
+const DEFAULT_WIDGET_URL = 'https://widget.bugdrop.dev/widget.v1.js';
 const DEFAULT_LOAD_TIMEOUT_MS = 10_000;
+const SDK_VERSION = '0.1.0';
 
 export type BugDropTheme = 'light' | 'dark' | 'auto';
 export type BugDropPosition = 'bottom-right' | 'bottom-left';
@@ -132,6 +133,7 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
   script.dataset.applicationId = options.applicationId;
   script.dataset.authTokenProvider = providerName;
   script.dataset.contractVersion = String(BUGDROP_CONTRACT_VERSION);
+  script.dataset.sdkVersion = SDK_VERSION;
   if (options.theme) script.dataset.theme = options.theme;
   if (options.position) script.dataset.position = options.position;
   if (options.button !== undefined) script.dataset.button = String(options.button);
@@ -239,7 +241,7 @@ function validateServiceUrl(value: string, field: string): string {
   } catch {
     throw new TypeError(`${field} must be a valid URL`);
   }
-  const localDevelopment = url.hostname === 'localhost' || url.hostname.endsWith('.localhost');
+  const localDevelopment = isLoopbackHost(url.hostname);
   if (
     (url.protocol !== 'https:' && !(localDevelopment && url.protocol === 'http:')) ||
     url.username ||
@@ -247,7 +249,19 @@ function validateServiceUrl(value: string, field: string): string {
   ) {
     throw new TypeError(`${field} must use HTTPS without embedded credentials`);
   }
+  if (url.search || url.hash) {
+    throw new TypeError(`${field} must not include a query string or fragment`);
+  }
   return url.href;
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname === '127.0.0.1' ||
+    hostname === '[::1]'
+  );
 }
 
 function isHostedWidgetApi(value: unknown): value is HostedWidgetApi {

@@ -2,6 +2,8 @@ export const BUGDROP_CONTRACT_VERSION = 1 as const;
 export const BUGDROP_CAPABILITY_MEDIA_TYPE =
   'application/vnd.bugdrop.submission-capability.v1+json' as const;
 export const BUGDROP_MAX_CAPABILITY_TTL_MS = 5 * 60 * 1_000;
+export const BUGDROP_CAPABILITY_CLOCK_SKEW_MS = 30 * 1_000;
+const CANONICAL_UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 export interface SubmissionCapability {
   schemaVersion: typeof BUGDROP_CONTRACT_VERSION;
@@ -90,7 +92,10 @@ export function parseUsableSubmissionCapability(
 ): SubmissionCapability {
   const capability = parseSubmissionCapability(value);
   const expiration = Date.parse(capability.expiresAt);
-  if (expiration <= now || expiration > now + BUGDROP_MAX_CAPABILITY_TTL_MS) {
+  if (
+    expiration <= now - BUGDROP_CAPABILITY_CLOCK_SKEW_MS ||
+    expiration > now + BUGDROP_MAX_CAPABILITY_TTL_MS + BUGDROP_CAPABILITY_CLOCK_SKEW_MS
+  ) {
     throw new TypeError('BugDrop returned an invalid capability response');
   }
   return capability;
@@ -101,6 +106,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isIsoDate(value: string): boolean {
+  if (!CANONICAL_UTC_TIMESTAMP.test(value)) return false;
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
 }
