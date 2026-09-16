@@ -1,9 +1,11 @@
 import {
   BUGDROP_CAPABILITY_MEDIA_TYPE,
   BUGDROP_CONTRACT_VERSION,
+  parseSubmissionBinding,
   parseUsableSubmissionCapability,
   type SubmissionCapability,
   type SubmissionCapabilityRequest,
+  type SubmissionBinding,
 } from '../../contracts/src/index.js';
 import { createApiKeyAuthenticator, type CapabilityRequestAuthenticator } from './api-key.js';
 
@@ -20,7 +22,7 @@ export interface BugDropServerOptions {
   fetch?: typeof globalThis.fetch;
 }
 
-export interface CreateSubmissionTokenOptions {
+export interface CreateSubmissionTokenOptions extends SubmissionBinding {
   origin?: string;
   environment?: string;
   signal?: AbortSignal;
@@ -64,7 +66,7 @@ export class BugDrop {
   }
 
   async createSubmissionToken(
-    options: CreateSubmissionTokenOptions = {}
+    options: CreateSubmissionTokenOptions
   ): Promise<SubmissionCapability> {
     if (!options || typeof options !== 'object') {
       throw new TypeError('createSubmissionToken requires an options object');
@@ -132,9 +134,14 @@ function createRequestBody(options: CreateSubmissionTokenOptions): SubmissionCap
   if (!options || typeof options !== 'object') {
     throw new TypeError('createSubmissionToken requires an options object');
   }
-  assertOnlyKeys(options, ['origin', 'environment', 'signal']);
+  assertOnlyKeys(options, ['submissionId', 'payloadDigest', 'origin', 'environment', 'signal']);
+  const binding = parseSubmissionBinding({
+    submissionId: options.submissionId,
+    payloadDigest: options.payloadDigest,
+  });
   const body: SubmissionCapabilityRequest = {
     schemaVersion: BUGDROP_CONTRACT_VERSION,
+    ...binding,
   };
   if (options.origin !== undefined) body.origin = validateOrigin(options.origin);
   if (options.environment !== undefined) {

@@ -4,6 +4,7 @@
   "authentication": {
     "providerDataAttribute": "data-auth-token-provider",
     "providerDatasetProperty": "authTokenProvider",
+    "providerParameterType": "submission-binding-v1",
     "providerReturnType": "opaque-token-string"
   }
 }

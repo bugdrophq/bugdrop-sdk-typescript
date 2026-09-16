@@ -27,7 +27,8 @@ const bugdrop = new BugDrop({ apiKey: process.env.BUGDROP_API_KEY });
 
 export async function POST(request: Request): Promise<Response> {
   await requireAuthorizedUser(request); // application-owned access control
-  const capability = await bugdrop.createSubmissionToken();
+  const { submissionId, payloadDigest } = await request.json();
+  const capability = await bugdrop.createSubmissionToken({ submissionId, payloadDigest });
   return Response.json(capability);
 }
 ```
@@ -38,11 +39,15 @@ import { BugDrop } from '@bugdrop/browser';
 
 BugDrop.init({
   applicationId: 'app_public_123',
-  tokenProvider: async () => {
+  tokenProvider: async (binding) => {
     const response = await fetch('/api/bugdrop-token', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'X-CSRF-Token': readCsrfToken() },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': readCsrfToken(),
+      },
+      body: JSON.stringify(binding),
     });
     if (!response.ok) throw new Error('Unable to authorize BugDrop');
     return response.json();
@@ -56,7 +61,9 @@ browser. Those values are resolved from the Application on BugDrop's servers.
 The SDK derives an Application authentication bearer from the API key and never sends the complete
 key or its root secret to BugDrop. The capability request contains no customer user identifier.
 BugDrop may enforce protections at the Application, credential, network/IP, replay, payload, and
-platform levels, but user-specific enforcement remains entirely with the customer application.
+platform levels, but user-specific enforcement remains entirely with the customer application. Each
+capability is bound to a per-submission ID and the SHA-256 digest of the exact submission request
+bytes; neither value may identify or be derived from a customer user.
 
 Direct script-tag installation remains supported as a first-class alternative to the SDK. Its
 authenticated provider returns only the opaque token string to the widget; see the

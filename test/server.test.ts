@@ -1,4 +1,5 @@
 import fixture from '../packages/contracts/fixtures/api-key-credential.v1.json';
+import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
 import { describe, expect, it, vi } from 'vitest';
 import { BugDrop, BugDropServerError } from '../packages/server/src/index.js';
 
@@ -7,17 +8,21 @@ const response = {
   token: 'opaque-capability',
   expiresAt: new Date(Date.now() + 4 * 60_000).toISOString(),
 };
+const binding = {
+  submissionId: bindingFixture.bound.submissionId,
+  payloadDigest: bindingFixture.bound.payloadDigest,
+};
 
 describe('@bugdrop/server', () => {
   it('creates an application-scoped token without an end-user identifier', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
 
-    await expect(client.createSubmissionToken()).resolves.toEqual(response);
+    await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
 
     const [url, init] = fetch.mock.calls[0]!;
     const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
-    expect(body).toEqual({ schemaVersion: 1 });
+    expect(body).toEqual({ schemaVersion: 1, ...binding });
     expect(init?.headers).toMatchObject({
       Accept: 'application/vnd.bugdrop.submission-capability.v1+json',
       Authorization: fixture.authorization,
@@ -34,6 +39,7 @@ describe('@bugdrop/server', () => {
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
 
     await client.createSubmissionToken({
+      ...binding,
       origin: 'https://app.example.com',
       environment: 'production',
     });
@@ -41,6 +47,7 @@ describe('@bugdrop/server', () => {
     const body = JSON.parse(String(fetch.mock.calls[0]![1]?.body)) as Record<string, unknown>;
     expect(body).toEqual({
       schemaVersion: 1,
+      ...binding,
       origin: 'https://app.example.com',
       environment: 'production',
     });
@@ -51,6 +58,7 @@ describe('@bugdrop/server', () => {
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(
       client.createSubmissionToken({
+        ...binding,
         ...({
           applicationId: 'app_public_other',
           repo: 'attacker/private',
@@ -66,7 +74,7 @@ describe('@bugdrop/server', () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(
-      client.createSubmissionToken({ subject: 'customer-user-42' } as never)
+      client.createSubmissionToken({ ...binding, subject: 'customer-user-42' } as never)
     ).rejects.toThrow('unsupported fields');
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -88,7 +96,7 @@ describe('@bugdrop/server', () => {
 
     let thrown: unknown;
     try {
-      await client.createSubmissionToken();
+      await client.createSubmissionToken(binding);
     } catch (error) {
       thrown = error;
     }
@@ -102,10 +110,10 @@ describe('@bugdrop/server', () => {
       apiKey: fixture.apiKey,
       fetch: vi.fn(() => Promise.reject(new Error(reflected))),
     });
-    await expect(networkClient.createSubmissionToken()).rejects.toMatchObject({
+    await expect(networkClient.createSubmissionToken(binding)).rejects.toMatchObject({
       code: 'request_failed',
     });
-    await expect(networkClient.createSubmissionToken()).rejects.not.toThrow(reflected);
+    await expect(networkClient.createSubmissionToken(binding)).rejects.not.toThrow(reflected);
   });
 
   it('rejects insecure or credential-bearing endpoints', () => {
@@ -130,7 +138,7 @@ describe('@bugdrop/server', () => {
       apiKey: fixture.apiKey,
       fetch: vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(overlong)),
     });
-    await expect(client.createSubmissionToken()).rejects.toMatchObject({
+    await expect(client.createSubmissionToken(binding)).rejects.toMatchObject({
       code: 'invalid_response',
     });
   });
@@ -144,15 +152,21 @@ describe('@bugdrop/server input validation', () => {
     }
   );
 
-  it('rejects invalid operation objects', async () => {
+  it('requires a complete submission binding', async () => {
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch: vi.fn() });
-    await expect(client.createSubmissionToken(null as never)).rejects.toThrow('options object');
+    await expect(client.createSubmissionToken(undefined as never)).rejects.toThrow(
+      'options object'
+    );
+    await expect(client.createSubmissionToken({} as never)).rejects.toThrow('submissionId');
   });
 
   it.each([
-    [{ origin: 'not a URL' }, 'origin'],
-    [{ origin: 'https://example.com/path' }, 'origin'],
-    [{ environment: 'bad environment!' }, 'environment'],
+    [{ ...binding, origin: 'not a URL' }, 'origin'],
+    [{ ...binding, origin: 'https://example.com/path' }, 'origin'],
+    [{ ...binding, environment: 'bad environment!' }, 'environment'],
+    [{ ...binding, submissionId: '' }, 'submissionId'],
+    [{ ...binding, payloadDigest: `${binding.payloadDigest}=` }, 'payloadDigest'],
+    [{ ...binding, payloadDigest: binding.payloadDigest.slice(0, -1) }, 'payloadDigest'],
   ])('rejects malformed exchange option %#', async (options, message) => {
     const fetch = vi.fn<typeof globalThis.fetch>();
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
@@ -179,7 +193,7 @@ describe('@bugdrop/server input validation', () => {
       endpoint: 'http://sdk.localhost/v1/submission-capabilities',
       fetch,
     });
-    await expect(client.createSubmissionToken()).resolves.toEqual(response);
+    await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
   });
 
   it('wraps malformed successful responses without exposing their contents', async () => {
@@ -192,7 +206,7 @@ describe('@bugdrop/server input validation', () => {
     });
     let thrown: unknown;
     try {
-      await client.createSubmissionToken();
+      await client.createSubmissionToken(binding);
     } catch (error) {
       thrown = error;
     }

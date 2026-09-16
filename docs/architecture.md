@@ -17,8 +17,9 @@ The private `@bugdrop/contracts` workspace is bundled into each public package, 
 artifacts have no private runtime dependency.
 
 The browser package creates a script element for BugDrop's hosted versioned widget, supplies
-`data-application-id`, and installs a narrowly scoped global function that returns the current
-short-lived capability token. It proxies the widget's public controller methods after the
+`data-application-id`, and installs a narrowly scoped global function that accepts the current
+submission binding and returns a short-lived capability token. It validates the binding before
+calling the customer's provider and proxies the widget's public controller methods after the
 `bugdrop:ready` event. It contains no widget UI, submission implementation, repository selection,
 or server exchange client.
 
@@ -26,7 +27,14 @@ The server package owns capability issuance from the customer's perspective. Its
 authenticator derives an Application bearer, attaches it to the capability request, and validates
 the versioned response. API-key material and the root remain private fields and never appear in
 request bodies, errors, or serialization. Capability requests contain no customer user identifier;
-the customer application owns user authentication, suspension, and user-specific rate limiting.
+they contain only a stable per-submission ID, a canonical digest of the exact submission body, and
+optional Application-scoped metadata. The customer application owns user authentication,
+suspension, and user-specific rate limiting.
+
+The hosted widget owns the final submission serialization. It passes `{ submissionId,
+payloadDigest }` through the installed provider to customer code, which requests a capability from
+its backend using `@bugdrop/server`. The managed ingress Worker later verifies that the same ID and
+the SHA-256 digest of the received raw body bytes match the capability before parsing or delivery.
 
 ## Future control-plane seam
 
@@ -56,7 +64,8 @@ customer's authenticated token endpoint returns the complete versioned capabilit
 }
 ```
 
-The named global identified by `data-auth-token-provider` fetches that response, extracts it, and
-returns only its opaque `token` string to the hosted widget. The widget does not receive the API
-key, a customer user identifier, or the complete capability response object. The endpoint must
-remain authenticated, same-origin, and CSRF-protected.
+The named global identified by `data-auth-token-provider` accepts the hosted widget's submission
+binding, fetches that response, extracts it, and returns only its opaque `token` string to the
+widget. The widget does not receive the API key, a customer user identifier, or the complete
+capability response object. The endpoint must remain authenticated, same-origin, and
+CSRF-protected.

@@ -9,10 +9,56 @@ export interface SubmissionCapability {
   expiresAt: string;
 }
 
-export interface SubmissionCapabilityRequest {
+export interface SubmissionBinding {
+  submissionId: string;
+  payloadDigest: string;
+}
+
+export interface SubmissionCapabilityRequest extends SubmissionBinding {
   schemaVersion: typeof BUGDROP_CONTRACT_VERSION;
   origin?: string;
   environment?: string;
+}
+
+export function parseSubmissionBinding(value: unknown): SubmissionBinding {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).some((key) => !['submissionId', 'payloadDigest'].includes(key))
+  ) {
+    throw new TypeError('BugDrop requires a valid submission binding');
+  }
+  const { submissionId, payloadDigest } = value;
+  if (typeof submissionId !== 'string') {
+    throw new TypeError('submissionId must be 1-200 valid UTF-8 bytes');
+  }
+  const byteLength = validUtf8ByteLength(submissionId);
+  if (byteLength === undefined || byteLength === 0 || byteLength > 200) {
+    throw new TypeError('submissionId must be 1-200 valid UTF-8 bytes');
+  }
+  if (
+    typeof payloadDigest !== 'string' ||
+    !/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(payloadDigest)
+  ) {
+    throw new TypeError('payloadDigest must be canonical base64url SHA-256');
+  }
+  return { submissionId, payloadDigest };
+}
+
+function validUtf8ByteLength(value: string): number | undefined {
+  let byteLength = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit <= 0x7f) byteLength += 1;
+    else if (codeUnit <= 0x7ff) byteLength += 2;
+    else if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return undefined;
+      byteLength += 4;
+      index += 1;
+    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) return undefined;
+    else byteLength += 3;
+  }
+  return byteLength;
 }
 
 export function parseSubmissionCapability(value: unknown): SubmissionCapability {

@@ -8,10 +8,12 @@ import { BugDrop } from '@bugdrop/browser';
 
 const controller = BugDrop.init({
   applicationId: 'app_public_123',
-  tokenProvider: async () => {
+  tokenProvider: async (binding) => {
     const response = await fetch('/api/bugdrop-token', {
       method: 'POST',
       credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(binding),
     });
     if (!response.ok) throw new Error('Unable to authorize BugDrop');
     return response.json();
@@ -23,4 +25,6 @@ await controller.open();
 ```
 
 Only a public Application ID is accepted. Repository and privileged flow configuration are not
-browser options. Capabilities are requested on demand and are never persisted by this package.
+browser options. The hosted widget supplies a per-submission ID and the canonical digest of its
+exact request bytes to `tokenProvider`; the package validates and forwards that binding without
+adding user identity. Capabilities are requested on demand and are never persisted by this package.

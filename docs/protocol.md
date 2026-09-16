@@ -33,9 +33,22 @@ Body:
 
 ```json
 {
-  "schemaVersion": 1
+  "schemaVersion": 1,
+  "submissionId": "018f1f2e-7b4a-7c3d-9e10-4f5a6b7c8d90",
+  "payloadDigest": "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbEQ"
 }
 ```
+
+`submissionId` is an opaque, stable identifier for one logical submission. It is 1-200 valid UTF-8
+bytes, is compared exactly without normalization, and MUST NOT contain or be derived from customer
+user identity. Retries of the same logical submission use the same ID; a different logical
+submission uses a new ID.
+
+`payloadDigest` is the canonical base64url-without-padding encoding of SHA-256 over the exact bytes
+of the managed submission request body. It is always 43 characters. It is not a digest of a parsed
+object: alternate property order, whitespace, Unicode escaping, line endings, or any other byte
+change produces a different binding. Standard base64, padding, aliases, and wrong-length values are
+rejected rather than normalized.
 
 The optional `origin` and `environment` fields may narrow a capability. The client rejects
 unexpected caller fields rather than forwarding them. In particular, no Application ID,
@@ -46,6 +59,13 @@ Customer applications authenticate, authorize, suspend, and rate-limit their own
 requesting a capability. BugDrop does not receive an identifier that would let it distinguish those
 users. The service may enforce Application-, credential-, network/IP-, replay-, payload-, and
 platform-level protections.
+
+The issued capability binds `submissionId` and `payloadDigest`. Managed ingress computes SHA-256
+over the received request-body bytes before parsing or delivery and requires both the exact digest
+and submission ID to match the capability. A changed byte, alternate JSON serialization, digest
+encoding change, or different submission ID fails closed. The normative positive and negative
+vectors are in
+[`packages/contracts/fixtures/submission-binding.v1.json`](../packages/contracts/fixtures/submission-binding.v1.json).
 
 ## Capability exchange response
 
@@ -59,7 +79,8 @@ platform-level protections.
 
 The browser treats `token` as opaque, keeps it only in the call stack, rejects an expired response
 or a response with more than five minutes remaining, and passes the token to the hosted widget's
-existing bearer-token provider hook. It does not decode, persist, log, or place the token in a URL.
+bearer-token provider hook. The hook accepts the submission binding used to request that token. The
+browser package does not decode, persist, log, or place the token in a URL.
 
 Fixtures in `packages/contracts/fixtures` are compatibility inputs, not signing examples or usable
 credentials. The authoritative service repository must consume the same vector before V1 is claimed
