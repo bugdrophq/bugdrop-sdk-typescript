@@ -83,6 +83,7 @@ export async function checkService(consumer, fixtures, start) {
     assertOutcome(await submit(service, capability), 'delivered');
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Replay caused a second delivery attempt');
+    assert.deepEqual(evidence.sdkVersions, [consumer.versions.server]);
     assertPrivate(evidence, fixtures, capability);
   });
   await scenario(async (service, client) => {

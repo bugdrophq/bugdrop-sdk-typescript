@@ -13,6 +13,19 @@ export async function checkTransport(consumer, fixtures) {
   const client = new consumer.BugDrop({ apiKey: credential.apiKey, endpoint: service.endpoint });
   try {
     service.respond(response);
+    for (const apiKey of credential.invalidApiKeys) {
+      assert.throws(
+        () => new consumer.BugDrop({ apiKey, endpoint: service.endpoint }),
+        /valid API key/
+      );
+    }
+    for (const payloadDigest of fixtures['submission-binding'].invalidPayloadDigests) {
+      await assert.rejects(
+        client.createSubmissionToken({ ...binding, payloadDigest }),
+        /payloadDigest/
+      );
+    }
+    assert.equal(service.requests.length, 0);
     for (const Client of [consumer.BugDrop, consumer.CommonJsBugDrop]) {
       assert.deepEqual(
         await new Client({
