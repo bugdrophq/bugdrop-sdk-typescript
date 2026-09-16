@@ -1,22 +1,18 @@
 # Protocol v1
 
 The compatibility surface is versioned independently from package versions. The following V1
-credential bytes and derivations are normative:
+credential bytes and authentication derivation are normative:
 
 ```text
 API key: bd_api_v1.<16-byte-base64url-key-id>.<32-byte-base64url-root>
 auth secret: HMAC-SHA-256(root, UTF8("bugdrop:auth:v1\0" + keyId))
 Authorization: Bearer bd_auth_v1.<keyId>.<base64url-auth-secret>
-wire subject: bdsub_v1_<base64url HMAC-SHA-256(root,
-              UTF8("bugdrop:subject:v1\0" + exactSubject))>
-subject size: 1-1024 valid UTF-8 bytes
 ```
 
 Both API-key segments MUST use canonical unpadded base64url: `keyId` MUST decode to exactly 16 bytes
 and `root` MUST decode to exactly 32 bytes. Non-canonical encodings and encoding aliases MUST be
-rejected, not normalized. The derived authentication-secret and subject-HMAC outputs MUST also use
-canonical unpadded base64url. `exactSubject` is encoded without trimming, case folding, or Unicode
-normalization. The full API key, decoded root, and raw subject never cross the network.
+rejected, not normalized. The derived authentication secret MUST also use canonical unpadded
+base64url. The complete API key and decoded root never cross the network.
 
 The compatibility vector is
 [`packages/contracts/fixtures/api-key-credential.v1.json`](../packages/contracts/fixtures/api-key-credential.v1.json).
@@ -37,23 +33,19 @@ Body:
 
 ```json
 {
-  "schemaVersion": 1,
-  "subject": "bdsub_v1_<base64url HMAC-SHA-256 digest>"
+  "schemaVersion": 1
 }
 ```
 
 The optional `origin` and `environment` fields may narrow a capability. The client rejects
 unexpected caller fields rather than forwarding them. In particular, no Application ID,
-repository, installation, labels, or flow permissions are accepted by this operation.
+repository, installation, labels, flow permissions, or customer user identifiers are accepted by
+this operation. Authentication identifies the Application credential only.
 
-The capability request and response bodies are independent from the authentication strategy. The
-internal strategy prepares request authentication and a privacy-safe wire subject together, so a
-future BYOA strategy can prepare a different bound, privacy-safe wire subject without changing
-either body shape.
-
-Pseudonyms are stable only within one API-key epoch. API-key rotation resets pseudonym-based limits
-and blocks. When old and new keys are concurrently accepted during a deployment overlap, they
-produce different pseudonyms for the same user and temporarily split per-user counters.
+Customer applications authenticate, authorize, suspend, and rate-limit their own users before
+requesting a capability. BugDrop does not receive an identifier that would let it distinguish those
+users. The service may enforce Application-, credential-, network/IP-, replay-, payload-, and
+platform-level protections.
 
 ## Capability exchange response
 

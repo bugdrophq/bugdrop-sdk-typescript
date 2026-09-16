@@ -11,7 +11,6 @@ export interface SubmissionCapability {
 
 export interface SubmissionCapabilityRequest {
   schemaVersion: typeof BUGDROP_CONTRACT_VERSION;
-  subject: string;
   origin?: string;
   environment?: string;
 }
