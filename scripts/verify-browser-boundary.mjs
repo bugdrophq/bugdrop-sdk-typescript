@@ -23,6 +23,9 @@ const forbidden = [
   'data-repo',
   'categoryLabels',
   'installationId',
+  'reporterId',
+  'userId',
+  'pseudonym',
   'GITHUB_TOKEN',
   'SUPABASE_SERVICE_ROLE',
 ];

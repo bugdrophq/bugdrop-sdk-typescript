@@ -1,3 +1,4 @@
+import packageMetadata from '../package.json';
 import {
   BUGDROP_CONTRACT_VERSION,
   parseSubmissionBinding,
@@ -8,7 +9,7 @@ import {
 
 const DEFAULT_WIDGET_URL = 'https://widget.bugdrop.dev/widget.v1.js';
 const DEFAULT_LOAD_TIMEOUT_MS = 10_000;
-const SDK_VERSION = '0.1.0';
+const SDK_VERSION = packageMetadata.version;
 
 export type BugDropTheme = 'light' | 'dark' | 'auto';
 export type BugDropPosition = 'bottom-right' | 'bottom-left';

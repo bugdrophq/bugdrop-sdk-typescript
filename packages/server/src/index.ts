@@ -1,3 +1,4 @@
+import packageMetadata from '../package.json';
 import {
   BUGDROP_CAPABILITY_MEDIA_TYPE,
   BUGDROP_CONTRACT_VERSION,
@@ -11,7 +12,7 @@ import { createApiKeyAuthenticator, type CapabilityRequestAuthenticator } from '
 
 const DEFAULT_CAPABILITY_ENDPOINT = 'https://api.bugdrop.dev/v1/submission-capabilities';
 const DEFAULT_TIMEOUT_MS = 10_000;
-const SDK_VERSION = '0.1.0';
+const SDK_VERSION = packageMetadata.version;
 
 assertServerRuntime();
 

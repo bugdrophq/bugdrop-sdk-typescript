@@ -25,6 +25,7 @@ describe('V1 API-key authenticator', () => {
   });
 
   it.each([
+    ...fixture.invalidApiKeys,
     undefined,
     '',
     ` ${fixture.apiKey}`,

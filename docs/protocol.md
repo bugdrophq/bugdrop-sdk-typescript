@@ -111,3 +111,39 @@ rather than normalized.
 Fixtures in `packages/contracts/fixtures` are compatibility inputs, not signing examples or usable
 credentials. The authoritative service repository must consume the same vector before V1 is claimed
 as end-to-end supported.
+
+## Stage 0 reconciliation and publication gate
+
+This tranche was cross-checked against the 2026-09-16 decision-complete
+`bugdrop-web/docs/account-control-plane-data-layer-proposal.md`, particularly approved decisions
+5, 6, 8, and 9 and the Stage 3 SDK publication gate. The SDK contract implements the customer-side
+exchange only. It cannot prove managed ingress, receipt consumption, edge revocation, or private
+Cloudflare delivery behavior. Those remain service-side conformance requirements, not SDK features.
+
+Before SDK publication, the authoritative Cloudflare implementation MUST consume these versioned
+inputs in its own CI against its actual issuer, verifier, ingress, and hosted-widget implementation:
+
+- `api-key-credential.v1.json`: derive the exact bearer from the valid API key; reject every
+  `invalidApiKeys` value at the credential parser and every `invalidAuthorizations` value at the
+  bearer parser. Store and verify the peppered authentication-secret HMAC, never the API-key root.
+- `origin.v1.json`: accept every `valid` origin exactly and reject every `invalid` spelling.
+  Also reject a valid origin that is not the Application's configured origin; syntax alone is not
+  authorization.
+- `submission-binding.v1.json`: accept the exact binding and reject all negative verification
+  cases and invalid digest encodings. Hash received bytes before parsing; preserve the submission
+  ID exactly. Changing serialization, a body byte, or the ID must prevent delivery.
+- `capability-response.v1.json` and `capability-validation.v1.json`: emit the V1 envelope and
+  canonical UTC timestamps; exercise the client's five-minute lifetime and 30-second skew boundary
+  cases relative to the fixture's `now`. These response checks do not replace signed-token expiry
+  verification at ingress. The future-dated fixture is not a live capability.
+- `widget-public-api.v1.json`: exercise the hosted controller and binding-aware token-provider hook
+  with the browser loader. A failed capability exchange must never invoke anonymous public ingress.
+
+A production-like end-to-end exchange must additionally demonstrate both installed SDK versions in
+allowlisted operational evidence; absence of API keys, roots, end-user identities, and stable
+reporter pseudonyms from browser inputs and service telemetry; and normalized errors without secret
+or payload reflection. The service must prove cross-Application/tenant replay rejection, durable
+submission receipt consumption before delivery, expiry and revocation enforcement, and no automatic
+retry after ambiguous delivery, as required by the approved control-plane proposal. Local SDK tests
+and mocks do not satisfy these service gates. No service deployment or package publication is
+included in this tranche.
