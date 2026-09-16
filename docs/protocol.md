@@ -33,7 +33,7 @@ authoritative capability service MUST consume this same vector before claiming V
 The managed production endpoint is
 `https://api.bugdrop.dev/v1/submission-capabilities`. Clients may use an explicit override for
 staging, loopback development, a customer-controlled proxy, or a supported self-hosted deployment.
-They MUST NOT fall back to an anonymous or legacy endpoint after a managed request fails.
+They MUST NOT fall back to an current public endpoint after a managed request fails.
 
 Headers:
 

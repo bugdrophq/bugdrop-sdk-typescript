@@ -33,4 +33,4 @@ The default script is the versioned managed widget at
 `https://widget.bugdrop.dev/widget.v1.js`. `widgetUrl` is an explicit staging, loopback,
 customer-proxy, or self-hosting override. It must use HTTPS, except on a loopback development host,
 and cannot contain credentials, a query string, or a fragment. The package never falls back to the
-legacy widget.
+current public widget.

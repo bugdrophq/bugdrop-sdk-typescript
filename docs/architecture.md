@@ -43,7 +43,7 @@ The server package defaults to
 managed widget at `https://widget.bugdrop.dev/widget.v1.js`. Tests inject a `fetch` implementation
 and never depend on either deployed service. Explicit URL overrides permit staging, loopback
 development, customer-controlled proxies, and future supported self-hosting without changing the
-public operation. The SDK never retries against the anonymous legacy Worker. Do not publish the
+public operation. The SDK never retries against the current public Worker. Do not publish the
 packages until both managed endpoints exist and the authoritative service repository passes the
 shared contract fixtures against them.
 

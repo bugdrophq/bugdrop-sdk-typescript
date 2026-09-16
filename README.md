@@ -60,7 +60,7 @@ browser. Those values are resolved from the Application on BugDrop's servers.
 
 The packages default to BugDrop's versioned managed endpoints at `api.bugdrop.dev` and
 `widget.bugdrop.dev`. Endpoint overrides exist only for explicit staging, local development,
-customer proxies, and future self-hosting; the SDK never falls back to the anonymous legacy service.
+customer proxies, and future self-hosting; the SDK never falls back to the current public service.
 
 The SDK derives an Application authentication bearer from the API key and never sends the complete
 key or its root secret to BugDrop. The capability request contains no customer user identifier.

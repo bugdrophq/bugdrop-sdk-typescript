@@ -62,7 +62,7 @@ export async function checkService(consumer, fixtures, start) {
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Replay caused a second delivery attempt');
     assert.deepEqual(evidence.sdkVersions, [consumer.versions.server]);
-    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server);
+    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server, 2);
   });
   await scenario(async (service, client) => {
     const wrongOrigin =
@@ -84,7 +84,13 @@ export async function checkService(consumer, fixtures, start) {
       'rejected'
     );
     assert.equal((await service.evidence()).attempts, 0);
-    assertPrivateEvidence(await service.evidence(), fixtures, capability, consumer.versions.server);
+    assertPrivateEvidence(
+      await service.evidence(),
+      fixtures,
+      capability,
+      consumer.versions.server,
+      1
+    );
   });
   for (const vector of fixture.verificationCases.filter((value) => !value.accepted)) {
     await scenario(async (service, client) => {
@@ -101,7 +107,8 @@ export async function checkService(consumer, fixtures, start) {
         await service.evidence(),
         fixtures,
         capability,
-        consumer.versions.server
+        consumer.versions.server,
+        1
       );
     });
   }
@@ -116,7 +123,8 @@ export async function checkService(consumer, fixtures, start) {
         await service.evidence(),
         fixtures,
         capability,
-        consumer.versions.server
+        consumer.versions.server,
+        1
       );
     });
   }
@@ -127,6 +135,6 @@ export async function checkService(consumer, fixtures, start) {
     assertOutcome(await submit(service, capability), 'indeterminate');
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Indeterminate outcome retried delivery');
-    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server);
+    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server, 2);
   });
 }

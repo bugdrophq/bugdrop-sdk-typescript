@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 
-export function assertPrivateEvidence(evidence, fixtures, capability, sdkVersion) {
+export function assertPrivateEvidence(
+  evidence,
+  fixtures,
+  capability,
+  sdkVersion,
+  expectedSubmissions
+) {
   const serialized = JSON.stringify(evidence);
   const credential = fixtures['api-key-credential'];
   for (const canary of [
@@ -20,10 +26,23 @@ export function assertPrivateEvidence(evidence, fixtures, capability, sdkVersion
   const { evidenceRequests, submissionResponses, ...telemetry } = evidence;
   assert.ok(Array.isArray(evidenceRequests), 'Missing actual telemetry request observations');
   assert.ok(Array.isArray(submissionResponses), 'Missing actual submission response observations');
+  assert.equal(
+    evidenceRequests.length,
+    1,
+    'Missing or unexpected capability exchange observations'
+  );
+  assert.ok(Number.isInteger(expectedSubmissions) && expectedSubmissions > 0);
+  assert.equal(
+    submissionResponses.length,
+    expectedSubmissions,
+    'Missing or unexpected submission observations'
+  );
   for (const request of evidenceRequests) {
     // These are test-owned observations of the actual sink request, not stored telemetry fields.
     assert.deepEqual(request, {
       body: sdkVersion,
+      unexpectedHeaders: false,
+      unexpectedUrl: false,
       headers: {
         'content-length': String(Buffer.byteLength(sdkVersion)),
         'content-type': 'text/plain;charset=UTF-8',
@@ -62,6 +81,8 @@ export function checkEvidenceAssertions(fixtures, sdkVersion) {
     evidenceRequests: [
       {
         body: sdkVersion,
+        unexpectedHeaders: false,
+        unexpectedUrl: false,
         headers: {
           'content-length': String(Buffer.byteLength(sdkVersion)),
           'content-type': 'text/plain;charset=UTF-8',
@@ -71,8 +92,31 @@ export function checkEvidenceAssertions(fixtures, sdkVersion) {
     ],
     logs: [],
   };
-  assertPrivateEvidence(safe, fixtures, capability, sdkVersion);
+  assertPrivateEvidence(safe, fixtures, capability, sdkVersion, 1);
   for (const mutate of [
+    (value) => {
+      value.evidenceRequests[0].unexpectedUrl = true;
+    },
+    (value) => {
+      delete value.evidenceRequests[0].unexpectedUrl;
+    },
+    (value) => {
+      value.evidenceRequests[0].unexpectedHeaders = true;
+    },
+    (value) => {
+      delete value.evidenceRequests[0].unexpectedHeaders;
+    },
+    (value) => {
+      value.evidenceRequests = [];
+    },
+    (value) => {
+      value.submissionResponses = [];
+      value.outcomes = [];
+    },
+    (value) => {
+      value.submissionResponses.push(value.submissionResponses[0]);
+      value.outcomes.push(value.outcomes[0]);
+    },
     (value) => {
       value.evidenceRequests[0].headers.authorization = 'unknown-secret';
     },
@@ -95,6 +139,6 @@ export function checkEvidenceAssertions(fixtures, sdkVersion) {
   ]) {
     const poisoned = structuredClone(safe);
     mutate(poisoned);
-    assert.throws(() => assertPrivateEvidence(poisoned, fixtures, capability, sdkVersion));
+    assert.throws(() => assertPrivateEvidence(poisoned, fixtures, capability, sdkVersion, 1));
   }
 }
