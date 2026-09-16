@@ -1,5 +1,6 @@
 import fixture from '../packages/contracts/fixtures/api-key-credential.v1.json';
 import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
+import originFixture from '../packages/contracts/fixtures/origin.v1.json';
 import serverPackage from '../packages/server/package.json';
 import { describe, expect, it, vi } from 'vitest';
 import { BugDrop, BugDropServerError } from '../packages/server/src/index.js';
@@ -165,10 +166,6 @@ describe('@bugdrop/server input validation', () => {
 
   it.each([
     [{ ...binding, origin: 'not a URL' }, 'origin'],
-    [{ ...binding, origin: 'https://example.com/path' }, 'origin'],
-    [{ ...binding, origin: 'http://example.com' }, 'origin'],
-    [{ ...binding, origin: 'ftp://example.com' }, 'origin'],
-    [{ ...binding, origin: 'https://user:pass@example.com' }, 'origin'],
     [{ ...binding, environment: 'bad environment!' }, 'environment'],
     [{ ...binding, submissionId: '' }, 'submissionId'],
     [{ ...binding, payloadDigest: `${binding.payloadDigest}=` }, 'payloadDigest'],
@@ -177,6 +174,13 @@ describe('@bugdrop/server input validation', () => {
     const fetch = vi.fn<typeof globalThis.fetch>();
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(client.createSubmissionToken(options)).rejects.toThrow(message);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(originFixture.invalid)('rejects non-canonical origin %s', async (origin) => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+    await expect(client.createSubmissionToken({ ...binding, origin })).rejects.toThrow('origin');
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -202,12 +206,7 @@ describe('@bugdrop/server input validation', () => {
     await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
   });
 
-  it.each([
-    'http://localhost:3000',
-    'http://bugdrop.localhost:3000',
-    'http://127.0.0.1:8787',
-    'http://[::1]:8787',
-  ])('accepts an exact HTTP loopback origin %s', async (origin) => {
+  it.each(originFixture.valid)('accepts canonical origin %s', async (origin) => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
     await expect(client.createSubmissionToken({ ...binding, origin })).resolves.toEqual(response);

@@ -14,9 +14,17 @@ and `root` MUST decode to exactly 32 bytes. Non-canonical encodings and encoding
 rejected, not normalized. The derived authentication secret MUST also use canonical unpadded
 base64url. The complete API key and decoded root never cross the network.
 
+The credential issuer and capability service MUST use the same derivation. At issuance, the service
+stores the key ID and `HMAC-SHA-256(server_pepper, auth_secret)` plus non-secret lifecycle metadata;
+it MUST NOT store the root/API key, authentication secret, or complete bearer. For a request, the
+service parses the canonical `bd_auth_v1` bearer, decodes the authentication secret, applies the
+server-pepper HMAC, and compares the result in constant time. Verification against the root/API key
+is not a valid V1 implementation because that value never crosses the network.
+
 The compatibility vector is
 [`packages/contracts/fixtures/api-key-credential.v1.json`](../packages/contracts/fixtures/api-key-credential.v1.json).
-It is a non-production byte-level contract fixture, not a usable credential.
+It is a non-production byte-level contract fixture, not a usable credential. Both the SDK and the
+authoritative capability service MUST consume this same vector before claiming V1 compatibility.
 
 ## Capability exchange request
 
@@ -60,6 +68,10 @@ The optional `origin` and `environment` fields may narrow a capability. `origin`
 canonical URL origin: HTTPS in deployed environments, or HTTP only for an explicit loopback host
 such as `localhost`, a `.localhost` name, `127.0.0.1`, or `[::1]`. Paths, queries, fragments,
 credentials, public HTTP origins, and non-HTTP schemes are rejected. The client rejects
+trailing-dot hostnames, default-port aliases, hostname case aliases, and other spellings whose
+serialized origin differs from the supplied value. The shared positive and negative vectors are in
+[`packages/contracts/fixtures/origin.v1.json`](../packages/contracts/fixtures/origin.v1.json); the
+SDK and authoritative capability service MUST consume the same fixture. The client rejects
 unexpected caller fields rather than forwarding them. In particular, no Application ID,
 repository, installation, labels, flow permissions, or customer user identifiers are accepted by
 this operation. Authentication identifies the Application credential only.

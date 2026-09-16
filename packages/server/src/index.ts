@@ -166,6 +166,7 @@ function validateOrigin(value: string): string {
   }
   if (
     url.origin !== value ||
+    url.hostname.endsWith('.') ||
     url.username ||
     url.password ||
     (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLoopbackHost(url.hostname)))
