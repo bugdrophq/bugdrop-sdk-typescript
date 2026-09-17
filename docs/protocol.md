@@ -162,3 +162,12 @@ delivery. The SDK-only transport fixture and browser controller double do not sa
 the real hosted-widget publication gate. The tested service revision and result belong in the
 integration PR evidence so that an external implementation change cannot silently redefine the
 contract.
+
+## Staging consumer gate dependency
+
+The [staging harness](staging.md) uses the unchanged V1 capability exchange and packed public exports.
+Its remote submit/control provider and independent evidence oracle are explicitly external,
+coordinated test-only dependencies owned by the Cloudflare and safety tasks. They are not new public
+routes or V1 wire fields. No remote provider or approved staging target is currently available, so
+missing configuration is a nonzero prerequisite failure, never a skipped/passed remote test. The local
+adapter and local observation schema do not establish deployed service or hosted-widget conformance.

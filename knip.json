@@ -2,8 +2,13 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs", "vitest.config.ts"],
-      "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}"],
+      "entry": [
+        "scripts/*.mjs",
+        "vitest.config.ts",
+        "test/staging/*.test.mjs",
+        "scripts/staging/worker.mjs"
+      ],
+      "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}", "test/staging/**/*.mjs"],
       "ignoreDependencies": ["@bugdrop/server"]
     },
     "packages/browser": {
