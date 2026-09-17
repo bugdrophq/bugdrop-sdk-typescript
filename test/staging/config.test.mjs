@@ -10,10 +10,19 @@ test('missing staging is a failure state with names only, never a pass', () => {
     missing: inputNames,
   });
   assert.equal(readConfiguration(configured).status, 'configured');
+  for (const name of ['BUGDROP_STAGING_SAFETY_RUNNER', 'BUGDROP_STAGING_SAFETY_RUNNER_SHA256']) {
+    assert.deepEqual(readConfiguration({ ...configured, [name]: '' }), {
+      status: 'staging_not_configured',
+      missing: [name],
+    });
+  }
 });
 test('reject ambiguous/production/aliased configuration without reflecting values', () => {
   for (const change of [
     { environment: 'production' },
+    { applicationId: undefined },
+    { applicationId: 'UNAPPROVED' },
+    { applicationId: 'unexpected/app' },
     { endpoint: 'https://api.bugdrop.dev/v1/submission-capabilities' },
     { origin: 'https://dogfood.example.com.' },
     { origin: 'https://DOGFOOD.example.com' },

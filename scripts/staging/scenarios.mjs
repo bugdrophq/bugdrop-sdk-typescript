@@ -1,14 +1,6 @@
 import assert from 'node:assert/strict';
-import { createHmac, randomUUID } from 'node:crypto';
-
-function credentialCanaries(apiKey) {
-  const [prefix, keyId, root] = apiKey.split('.');
-  assert.equal(prefix, 'bd_api_v1');
-  const secret = createHmac('sha256', Buffer.from(root, 'base64url'))
-    .update(`bugdrop:auth:v1\0${keyId}`, 'utf8')
-    .digest('base64url');
-  return [apiKey, root, secret, `Bearer bd_auth_v1.${keyId}.${secret}`];
-}
+import { randomUUID } from 'node:crypto';
+import { credentialCanaries } from './canaries.mjs';
 
 export async function runScenarios({ consumer, fixtures, provider, oracle, target, runId }) {
   const names = ['delivered', 'origin', 'tampered', 'binding', 'revoked', 'stale', 'indeterminate'];
