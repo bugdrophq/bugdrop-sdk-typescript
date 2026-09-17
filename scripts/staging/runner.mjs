@@ -1,6 +1,7 @@
 import { fork } from 'node:child_process';
 import { resolve } from 'node:path';
 import { readConfiguration } from './config.mjs';
+import { readCompletionReceipt } from './receipt.mjs';
 
 export async function runIsolated(env, timeout = 600_000) {
   const config = readConfiguration(env);
@@ -15,12 +16,7 @@ export async function runIsolated(env, timeout = 600_000) {
     const timer = setTimeout(() => child.kill('SIGKILL'), timeout);
     child.on('message', (value) => {
       // Never forward arbitrary module output or error details, even when the child fails.
-      if (
-        value?.status === 'staging_passed' &&
-        value.serviceRevision === config.target.serviceRevision
-      ) {
-        receipt = { status: 'staging_passed', serviceRevision: config.target.serviceRevision };
-      }
+      receipt = readCompletionReceipt(value, config.target);
     });
     child.on('error', () => {
       clearTimeout(timer);

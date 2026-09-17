@@ -1,15 +1,26 @@
 # Unpublished packed SDK staging gate
 
-Remote dogfood is **not configured**. No Cloudflare account, hostname, GitHub App, or dedicated dogfood
-repository is approved. The staging provider is not implemented: the merged local adapter cannot
-supply remote submission/control operations or independently observed remote evidence. This tranche
-provides a reviewed gate and scenario driver; local/unit passes are not staging proof.
+Remote dogfood is **not configured in this repository**. The gate requires an approved target
+manifest and a reviewed remote provider handoff before execution. The merged local adapter cannot
+supply remote submission/control operations or independently observed remote evidence. The gate and
+scenario driver alone do not establish staging proof; local/unit passes remain local evidence.
 
 `npm run test:staging` builds and installs actual SDK tarballs and requires a remote run.
 `npm run validate:dogfood` requires both normal validation and that staging run. Missing inputs exit 2
 with `staging_not_configured`; malformed inputs or any failed check exit nonzero. Only a completed
 scenario suite and safety attestation can emit `staging_passed` with the exact service revision.
 There is no skip or local-adapter fallback. Public SDK exports and all six V1 fixtures remain intact.
+
+Successful runs emit a sanitized gate receipt with `receiptVersion: 1`, `proofKind: 'remote'`,
+the independently observed `runId`, approved `serviceRevision` and `deploymentDigest`, actual packed
+server `sdkVersion`, `sdkScenarios: 7`, and `safetyScenarios: 13`. Version `0.1.0` is the only currently
+supported private runner contract; it is checked against the installed package before scenario
+controls run. The receipt is emitted only after both suites and consumer cleanup succeed. The parent
+requires the exact receipt shape and target commitments plus successful child exit; partial,
+mismatched, unsupported-version, or extra-field receipts fail closed. Raw observations, identities,
+capabilities, credential markers, and provider errors never enter the receipt. Shape tests use
+synthetic objects and do not count as live remote receipts. This gate receipt is not a public V1
+wire/evidence schema change and does not claim hosted browser-widget coverage.
 
 ## External inputs required before execution
 
@@ -145,7 +156,7 @@ CI requires all three module paths to remain inside the checkout; runner integri
 are checked again in the isolated child before private scenario work.
 
 Provider output and exception details are discarded in a child process. The parent emits only
-allowlisted status, missing variable names, and a validated service revision on success. A failed
+allowlisted failure status/missing variable names or the validated complete-run receipt above. A failed
 oracle, wrong target, bad module digest, missing module, crash, or timeout cannot become a pass.
 `close()` runs on scenario failure and the temporary consumer is removed. A hard timeout cannot
 promise remote cleanup: stop execution, inspect the approved target read-only, and use the provider's

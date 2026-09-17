@@ -7,6 +7,7 @@ import { readConfiguration } from './config.mjs';
 import { installConsumer, readFixtures } from '../integration/packed-consumer.mjs';
 import { runScenarios } from './scenarios.mjs';
 import { assertSafetyRunner, runSafety } from './safety.mjs';
+import { completionReceipt } from './receipt.mjs';
 
 async function pinnedModule(path, digest) {
   assert.equal(
@@ -33,12 +34,18 @@ try {
   assert.deepEqual(inspected, config.target);
   const repository = resolve(import.meta.dirname, '../..');
   consumer = await installConsumer(repository);
+  assertSafetyRunner(runner, consumer.versions.server);
   const fixtures = await readFixtures(repository);
   await runScenarios({ consumer, fixtures, provider, oracle, target: config.target, runId });
   await runSafety({ consumer, fixtures, provider, runner, target: config.target, runId });
+  const receipt = completionReceipt({
+    target: config.target,
+    runId,
+    sdkVersion: consumer.versions.server,
+  });
   await consumer.close();
   consumer = undefined;
-  process.send?.({ status: 'staging_passed', serviceRevision: config.target.serviceRevision });
+  process.send?.(receipt);
 } catch {
   process.exitCode = 1;
 } finally {
