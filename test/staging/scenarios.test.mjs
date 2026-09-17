@@ -7,10 +7,16 @@ import { target } from './support.mjs';
 
 const fixtures = await readFixtures(resolve(import.meta.dirname, '../..'));
 
-function testDouble() {
+function testDouble({
+  failureScenario,
+  denialStatus = 403,
+  denialCode = 'request_failed',
+  failBaseline = false,
+} = {}) {
   let state;
   const closed = [];
   const observed = [];
+  const exchanges = [];
   const provider = {
     async startScenario({ name, submissionId }) {
       state = { name, submissionId, exchanges: 0, outcomes: [], blocked: false };
@@ -46,8 +52,15 @@ function testDouble() {
       if ('userId' in input) throw new TypeError('unsupported');
       if (fixtures.origin.invalid.includes(input.origin)) throw new TypeError('origin');
       state.exchanges++;
+      exchanges.push({ scenario: state.name, origin: input.origin });
+      if (failBaseline && state.name === 'origin' && input.origin === target.origin) {
+        throw Object.assign(new Error('unavailable'), { code: 'request_failed', status: 503 });
+      }
       if (state.blocked || input.origin !== target.origin) {
-        throw Object.assign(new Error('rejected'), { code: 'request_failed' });
+        throw Object.assign(new Error('rejected'), {
+          code: state.name === failureScenario ? denialCode : 'request_failed',
+          status: state.name === failureScenario ? (denialStatus ?? undefined) : 403,
+        });
       }
       return {
         schemaVersion: 1,
@@ -59,6 +72,11 @@ function testDouble() {
   const oracle = {
     async assertEvidence({ evidence, expected }) {
       assert.equal(evidence.exchanges, expected.exchangeCount);
+      const successes = ['origin', 'revoked', 'stale'].includes(expected.scenario)
+        ? [true, false]
+        : [true];
+      assert.deepEqual(expected.exchangeSuccesses, successes);
+      assert.equal(expected.exchangeCount, successes.length);
       assert.deepEqual(evidence.outcomes, expected.submissionOutcomes);
       assert.equal(expected.serviceRevision, target.serviceRevision);
       assert.equal(expected.deploymentDigest, target.deploymentDigest);
@@ -75,6 +93,7 @@ function testDouble() {
     consumer: { BugDrop, versions: { server: '0.1.0' } },
     closed,
     observed,
+    exchanges,
   };
 }
 
@@ -99,5 +118,31 @@ test('false or missing safety attestation fails and closes the scenario', async 
     fixture.oracle.assertEvidence = async () => result;
     await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
     assert.deepEqual(fixture.closed, ['delivered']);
+  }
+});
+
+test('configured-origin failure aborts before alias testing or attestation', async () => {
+  const fixture = testDouble({ failBaseline: true });
+  await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
+  assert.deepEqual(
+    fixture.exchanges.filter(({ scenario }) => scenario === 'origin'),
+    [{ scenario: 'origin', origin: target.origin }]
+  );
+  assert.deepEqual(fixture.observed, ['delivered']);
+  assert.deepEqual(fixture.closed, ['delivered', 'origin']);
+});
+
+test('only an explicit request_failed HTTP 403 proves issuance denial', async () => {
+  for (const failureScenario of ['origin', 'revoked', 'stale']) {
+    for (const denialStatus of [401, 429, 500, 503, null]) {
+      const fixture = testDouble({ failureScenario, denialStatus });
+      await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
+      assert.equal(fixture.observed.includes(failureScenario), false);
+      assert.equal(fixture.closed.at(-1), failureScenario);
+    }
+    const fixture = testDouble({ failureScenario, denialCode: 'invalid_response' });
+    await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
+    assert.equal(fixture.observed.includes(failureScenario), false);
+    assert.equal(fixture.closed.at(-1), failureScenario);
   }
 });
