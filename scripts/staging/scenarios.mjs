@@ -37,9 +37,11 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         'identity-canary',
       ];
       const submissionOutcomes = [];
+      const exchangeSuccesses = [];
       let exchangeCount = 0;
-      async function authorize(origin = target.origin) {
+      async function authorize(origin = target.origin, shouldSucceed = true) {
         exchangeCount++;
+        exchangeSuccesses.push(shouldSucceed);
         const capability = await client.createSubmissionToken({ ...binding, origin });
         forbiddenValues.push(capability.token);
         return capability;
@@ -50,11 +52,15 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         submissionOutcomes.push(expected);
       }
       if (name === 'origin') {
+        await authorize();
         const wrongOrigin =
           target.origin === 'https://other.example.com'
             ? 'https://different.example.com'
             : 'https://other.example.com';
-        await assert.rejects(authorize(wrongOrigin), { code: 'request_failed' });
+        await assert.rejects(authorize(wrongOrigin, false), {
+          code: 'request_failed',
+          status: 403,
+        });
         for (const origin of fixtures.origin.invalid) {
           await assert.rejects(client.createSubmissionToken({ ...binding, origin }), /origin/);
         }
@@ -86,7 +92,10 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         } else {
           if (name === 'revoked') await service.revoke();
           else await service.expireAuthorizationState();
-          await assert.rejects(authorize(), { code: 'request_failed' });
+          await assert.rejects(authorize(target.origin, false), {
+            code: 'request_failed',
+            status: 403,
+          });
           await submit(capability, 'rejected');
         }
       }
@@ -106,6 +115,7 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
             scenario: name,
             sdkVersion: consumer.versions.server,
             exchangeCount,
+            exchangeSuccesses,
             submissionOutcomes,
             attempts: ['delivered', 'indeterminate'].includes(name) ? 1 : 0,
           },

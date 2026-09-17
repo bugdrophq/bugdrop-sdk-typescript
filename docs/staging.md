@@ -64,6 +64,12 @@ unavailable sources, stale/wrong-deployment evidence, missing/extra observations
 and issue-count discrepancies. The SDK independently scans evidence for credential, capability,
 report-body, and submission-ID canaries before invoking the oracle. Observer output is never printed.
 
+`expected.exchangeSuccesses` records the required outcome of every HTTP exchange in order.
+The configured origin must mint successfully before origin rejection is tested. Expected issuance
+denials require `request_failed` with HTTP 403; authentication errors, rate limits, service failures,
+and transport errors cannot stand in for that denial. The oracle must enforce successful 2xx or
+explicit 403 observations against this array.
+
 Scenarios require delivery/replay, exact-origin rejection, tampered tokens, every negative V1
 submission-binding vector, revocation, stale authorization, and indeterminate replay with one attempt.
 Capability validation and SDK-version reporting run through the installed server export. Existing
