@@ -35,14 +35,25 @@ test('local validation requires complete, exclusive, scoped counters with zero d
     }
   }
   for (const next of [0, 2]) {
-    const input = context(LocalRejectingClient);
+    let sdkCalls = 0;
+    const input = context(
+      class {
+        async createSubmissionToken() {
+          if (++sdkCalls === 1) return { schemaVersion: 1, token: 'baseline-only' };
+          throw new TypeError('origin must be canonical');
+        }
+      }
+    );
     let calls = 0;
     input.service.readExchangeCount = async () => snapshot(calls++ ? next : 1);
     const bridge = await safetyProvider(input).startScenario({ scenario: 'origin-aliases', runId });
     try {
+      await bridge.mint({ binding: {}, origin: input.target.origin });
       await assert.rejects(
         bridge.rejectInvalidOrigin({ binding: {}, origin: `${input.target.origin}/` })
       );
+      assert.equal(sdkCalls, 2);
+      assert.equal(calls, 2);
     } finally {
       await assert.rejects(bridge.close());
     }
