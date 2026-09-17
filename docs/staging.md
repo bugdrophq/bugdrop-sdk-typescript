@@ -1,15 +1,26 @@
 # Unpublished packed SDK staging gate
 
-Remote dogfood is **not configured**. No Cloudflare account, hostname, GitHub App, or dedicated dogfood
-repository is approved. The staging provider is not implemented: the merged local adapter cannot
-supply remote submission/control operations or independently observed remote evidence. This tranche
-provides a reviewed gate and scenario driver; local/unit passes are not staging proof.
+Remote dogfood is **not configured in this repository**. The gate requires an approved target
+manifest and a reviewed remote provider handoff before execution. The merged local adapter cannot
+supply remote submission/control operations or independently observed remote evidence. The gate and
+scenario driver alone do not establish staging proof; local/unit passes remain local evidence.
 
 `npm run test:staging` builds and installs actual SDK tarballs and requires a remote run.
 `npm run validate:dogfood` requires both normal validation and that staging run. Missing inputs exit 2
 with `staging_not_configured`; malformed inputs or any failed check exit nonzero. Only a completed
 scenario suite and safety attestation can emit `staging_passed` with the exact service revision.
 There is no skip or local-adapter fallback. Public SDK exports and all six V1 fixtures remain intact.
+
+Successful runs emit a sanitized gate receipt with `receiptVersion: 1`, `proofKind: 'remote'`,
+the independently observed `runId`, approved `serviceRevision` and `deploymentDigest`, actual packed
+server `sdkVersion`, `sdkScenarios: 7`, and `safetyScenarios: 13`. Version `0.1.0` is the only currently
+supported private runner contract; it is checked against the installed package before scenario
+controls run. The receipt is emitted only after both suites and consumer cleanup succeed. The parent
+requires the exact receipt shape and target commitments plus successful child exit; partial,
+mismatched, unsupported-version, or extra-field receipts fail closed. Raw observations, identities,
+capabilities, credential markers, and provider errors never enter the receipt. Shape tests use
+synthetic objects and do not count as live remote receipts. This gate receipt is not a public V1
+wire/evidence schema change and does not claim hosted browser-widget coverage.
 
 ## External inputs required before execution
 
@@ -112,6 +123,32 @@ all completed requests in the observation window, and report concurrent or ambig
 nonexclusive. Missing, stale, unscoped, incomplete, decreasing, or concurrent observations fail.
 These are collector requirements, not values to fabricate from the environment or SDK call count.
 
+An authority Durable Object counter observes only requests admitted to that object. A request can
+fail with HTTP 503 before admission, leaving its count unchanged. That counter alone therefore cannot
+establish complete network-attempt evidence. Both SDK scenario paths keep an in-memory transcript of
+actual packed SDK invocations and outcomes without replacing fetch. The private exact shape is
+`{ schemaVersion: 1, runId, scenario, applicationId, sdkVersion, complete, attempts }`; each attempt
+is `{ sequence, outcome, status }`. No input, token, error message, header, or body is retained.
+Snapshots and entries are copied and frozen. Successful SDK calls record `capability_issued` with
+null status; only the independent ingress observer supplies the actual successful HTTP status.
+
+Strict issuance HTTP 403 records `http_denied`. Expected local origin validation records
+`local_origin_rejected`; the intentional unsupported `userId` negative test records
+`local_input_rejected` only for its exact SDK TypeError. Other HTTP failures record `http_error`,
+missing-status request failures record `transport_error`, and unknown errors record `sdk_error`.
+Those failures permanently mark the transcript incomplete. Pending invocations are also incomplete.
+Missing HTTP status never implies local validation. Observer read failures and mismatched snapshots
+also invalidate the safety scenario; cleanup still runs and cannot make it successful.
+
+`evidence({ sdkAttemptTranscript })` receives this private transcript for collector reconciliation.
+The SDK separately compares independent `evidence.exchanges` against all issued/denied calls, requiring
+exact count, order, observed SDK version and successful 2xx versus denied 403 status. Origin snapshots
+require a healthy idle transcript and the matching count in addition to complete/exclusive remote
+observations. Missing/extra durable entries, pre-admission 503, transport errors, unavailable observers,
+or an unknown result cannot produce a complete proof, even if a later read returns zero or a plausible
+count. The remote collector must obtain its exchange entries independently, never manufacture them
+from the supplied transcript. This private reconciliation does not add fields to public evidence V1.
+
 The runner records each local proof as `client_validation_rejected` with zero network attempts and
 both snapshots. It separately sends a canonical wrong origin through the SDK, requires HTTP 403,
 and records `http_denied` with exactly one observed network attempt. Final `originChecks` must match
@@ -127,6 +164,26 @@ lifecycle or retention observations, partial results, and thrown attestation fai
 or collector implementation. Actual provider observations remain an external prerequisite.
 
 ## CI and operation
+
+The private `scripts/staging/observer.mjs` consumer accepts only an injected
+`transport(path, requestInit): Promise<Response>` capability and a separate canonical 32-byte
+base64url signing key. It has no URL or default fetch. The provider supplies approved transport;
+that handoff is not configured here. Its frozen application/installation/run/scenario scope exposes
+only `start`, `read`, and `close`; admission `begin`/`finish` remain ingress-owned.
+
+Observation schema 2 signs exact bytes and path with separate request/response v2 HMAC domains.
+Every request carries a fresh UUIDv4 nonce and requires its exact signed response echo. The consumer
+rejects v1, replay, wrong scope/lease, unknown fields, incomplete/nonexclusive reads, changed history,
+and late admissions between the final read and close. Requests are bounded to 1 KiB, responses to
+16 KiB, and transport plus response-body consumption to two seconds. Any failure stays failed even
+after a healthy read or cleanup. The provider must read and reconcile evidence before closing;
+close is still attempted after failures and cannot supply missing evidence.
+
+Scenario cleanup seals SDK invocation entry, aborts outstanding calls, and waits up to two seconds
+for settlement before attempting provider close. An outstanding call makes the scenario fail even
+if abort settles it. The safety bridge permanently blocks another scenario after failed cleanup or
+an undrained invocation, including after lease expiry; successful cleanup permits the next scenario.
+These local tests establish fail-closed consumer behavior, not remote observation or uninstall proof.
 
 The dispatch-only `Staging dogfood conformance` workflow has an unconditional staging job. Configure
 and approve the protected `bugdrop-staging` environment before dispatch. It fails on missing inputs;
@@ -145,7 +202,7 @@ CI requires all three module paths to remain inside the checkout; runner integri
 are checked again in the isolated child before private scenario work.
 
 Provider output and exception details are discarded in a child process. The parent emits only
-allowlisted status, missing variable names, and a validated service revision on success. A failed
+allowlisted failure status/missing variable names or the validated complete-run receipt above. A failed
 oracle, wrong target, bad module digest, missing module, crash, or timeout cannot become a pass.
 `close()` runs on scenario failure and the temporary consumer is removed. A hard timeout cannot
 promise remote cleanup: stop execution, inspect the approved target read-only, and use the provider's

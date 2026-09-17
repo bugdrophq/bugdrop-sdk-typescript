@@ -120,5 +120,5 @@ test('bridge retains private method receivers and exact submission bytes', async
   assert.deepEqual(input.service.input, { capability, binding, requestBody: reportBody });
   assert.ok((await bridge.secretMarkers()).includes('provider-secret-canary'));
   await bridge.close();
-  assert.deepEqual(await bridge.evidence(), { closed: 1 });
+  assert.deepEqual(await bridge.evidence(), { closed: 1, exchanges: [] });
 });

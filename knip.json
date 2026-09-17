@@ -6,7 +6,8 @@
         "scripts/*.mjs",
         "vitest.config.ts",
         "test/staging/*.test.mjs",
-        "scripts/staging/worker.mjs"
+        "scripts/staging/worker.mjs",
+        "scripts/staging/observer.mjs"
       ],
       "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}", "test/staging/**/*.mjs"],
       "ignoreDependencies": ["@bugdrop/server"]
