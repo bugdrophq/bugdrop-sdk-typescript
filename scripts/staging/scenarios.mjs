@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { credentialCanaries } from './canaries.mjs';
+import { observeAttempts } from './attempts.mjs';
 
 export async function runScenarios({ consumer, fixtures, provider, oracle, target, runId }) {
   const names = ['delivered', 'origin', 'tampered', 'binding', 'revoked', 'stale', 'indeterminate'];
@@ -18,6 +19,12 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         'Fixture credentials are not staging credentials'
       );
       const client = new consumer.BugDrop({ apiKey, endpoint: target.endpoint });
+      const observed = observeAttempts(client, {
+        runId,
+        scenario: name,
+        applicationId: target.applicationId,
+        sdkVersion: consumer.versions.server,
+      });
       const binding = { ...fixtures['submission-binding'].bound, submissionId };
       const requestBody = fixtures['submission-binding'].requestBody;
       const forbiddenValues = [
@@ -34,7 +41,7 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
       async function authorize(origin = target.origin, shouldSucceed = true) {
         exchangeCount++;
         exchangeSuccesses.push(shouldSucceed);
-        const capability = await client.createSubmissionToken({ ...binding, origin });
+        const capability = await observed.invoke({ ...binding, origin });
         forbiddenValues.push(capability.token);
         return capability;
       }
@@ -54,10 +61,10 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
           status: 403,
         });
         for (const origin of fixtures.origin.invalid) {
-          await assert.rejects(client.createSubmissionToken({ ...binding, origin }), /origin/);
+          await assert.rejects(observed.invoke({ ...binding, origin }, 'origin'), /origin/);
         }
         await assert.rejects(
-          client.createSubmissionToken({ ...binding, userId: 'identity-canary' }),
+          observed.invoke({ ...binding, userId: 'identity-canary' }, 'unsupported'),
           /unsupported/
         );
       } else {
@@ -91,7 +98,9 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
           await submit(capability, 'rejected');
         }
       }
-      const evidence = await service.evidence();
+      observed.assertComplete();
+      const evidence = await service.evidence({ sdkAttemptTranscript: observed.snapshot() });
+      observed.assertExchanges(evidence.exchanges);
       const serialized = JSON.stringify(evidence);
       for (const value of forbiddenValues) assert.ok(!serialized.includes(value));
       // Safety owns the remote schema and provenance checks. A missing or false result is failure.

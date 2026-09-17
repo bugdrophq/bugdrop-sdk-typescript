@@ -38,7 +38,7 @@ export function context(BugDrop = class {}) {
     uninstallApprovedInstallation() {},
     waitForSignedUninstall() {},
     evidence() {
-      return { closed: this.closed };
+      return { closed: this.closed, exchanges: [] };
     },
     submit(input) {
       this.input = input;

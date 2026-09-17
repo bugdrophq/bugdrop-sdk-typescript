@@ -26,6 +26,7 @@ test('safety mint uses the installed packed SDK and only classifies HTTP 403 as 
     );
   });
   let bridge;
+  let poisoned = false;
   try {
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
     const input = context();
@@ -66,6 +67,7 @@ test('safety mint uses the installed packed SDK and only classifies HTTP 403 as 
     assert.equal(requests.length, 2);
     assert.equal(requests[1].body.origin, 'https://wrong-origin.invalid');
     for (status of [401, 429, 500, 503]) {
+      poisoned = true;
       await assert.rejects(mint(), { code: 'request_failed', status });
     }
     assert.equal(requests.length, 6);
@@ -73,7 +75,8 @@ test('safety mint uses the installed packed SDK and only classifies HTTP 403 as 
     assert.ok(markers.includes(apiKey));
     assert.ok(markers.includes(requests[0].headers.authorization));
   } finally {
-    await bridge?.close();
+    if (poisoned) await assert.rejects(bridge.close());
+    else await bridge?.close();
     await new Promise((resolve) => server.close(resolve));
     await consumer.close();
   }

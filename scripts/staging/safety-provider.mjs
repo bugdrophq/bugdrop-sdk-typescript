@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { credentialCanaries } from './canaries.mjs';
 import { counterSnapshot } from './origin-proof.mjs';
+import { observeAttempts } from './attempts.mjs';
 
 const privateMethods = [
   'injectFault',
@@ -41,12 +42,29 @@ export function safetyProvider({ consumer, provider, target, runId, fixtures }) 
         assert.equal(typeof apiKey, 'string');
         assert.notEqual(apiKey, fixtures['api-key-credential'].apiKey);
         const client = new consumer.BugDrop({ apiKey, endpoint: target.endpoint });
+        const observed = observeAttempts(client, {
+          runId,
+          scenario,
+          applicationId: target.applicationId,
+          sdkVersion: consumer.versions.server,
+        });
+        const readCount = async () => {
+          try {
+            observed.assertComplete();
+            const count = counterSnapshot(await service.readExchangeCount(), { runId, target });
+            observed.assertCount(count.count);
+            return count;
+          } catch (error) {
+            observed.invalidate();
+            throw error;
+          }
+        };
         const markers = credentialCanaries(apiKey);
         return Object.freeze({
           ...Object.fromEntries(privateMethods.map((name) => [name, service[name].bind(service)])),
           async mint({ binding, origin }) {
             try {
-              return await client.createSubmissionToken({ ...binding, origin });
+              return await observed.invoke({ ...binding, origin });
             } catch (error) {
               if (error?.code === 'request_failed' && error.status === 403) return null;
               throw error;
@@ -54,15 +72,35 @@ export function safetyProvider({ consumer, provider, target, runId, fixtures }) 
           },
           async rejectInvalidOrigin({ binding, origin }) {
             assert.equal(scenario, 'origin-aliases');
-            const scope = { runId, target };
-            const before = counterSnapshot(await service.readExchangeCount(), scope);
+            const before = await readCount();
             await assert.rejects(
-              client.createSubmissionToken({ ...binding, origin }),
+              observed.invoke({ ...binding, origin }, 'origin'),
               (error) => error instanceof TypeError && /^origin must /.test(error.message)
             );
-            const after = counterSnapshot(await service.readExchangeCount(), scope);
+            const after = await readCount();
             assert.equal(after.count, before.count);
             return { outcome: 'client_validation_rejected', networkAttempts: 0, before, after };
+          },
+          readExchangeCount: readCount,
+          async evidence() {
+            try {
+              observed.assertComplete();
+              const evidence = await service.evidence({
+                sdkAttemptTranscript: observed.snapshot(),
+              });
+              observed.assertExchanges(evidence.exchanges);
+              return evidence;
+            } catch (error) {
+              observed.invalidate();
+              throw error;
+            }
+          },
+          async close() {
+            try {
+              await service.close();
+            } finally {
+              observed.assertComplete();
+            }
           },
           submit({ capability, binding, reportBody, origin }) {
             assert.equal(origin, target.origin);

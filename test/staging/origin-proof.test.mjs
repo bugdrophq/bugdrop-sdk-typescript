@@ -31,7 +31,7 @@ test('local validation requires complete, exclusive, scoped counters with zero d
         bridge.rejectInvalidOrigin({ binding: {}, origin: `${input.target.origin}/` })
       );
     } finally {
-      await bridge.close();
+      await assert.rejects(bridge.close());
     }
   }
   for (const next of [0, 2]) {
@@ -44,13 +44,13 @@ test('local validation requires complete, exclusive, scoped counters with zero d
         bridge.rejectInvalidOrigin({ binding: {}, origin: `${input.target.origin}/` })
       );
     } finally {
-      await bridge.close();
+      await assert.rejects(bridge.close());
     }
   }
 });
 
 test('reused mutable counter objects cannot hide network activity during local rejection', async () => {
-  const shared = snapshot();
+  const shared = snapshot(0);
   const input = context(
     class {
       async createSubmissionToken() {
@@ -66,7 +66,7 @@ test('reused mutable counter objects cannot hide network activity during local r
       bridge.rejectInvalidOrigin({ binding: {}, origin: `${input.target.origin}/` })
     );
   } finally {
-    await bridge.close();
+    await assert.rejects(bridge.close());
   }
 });
 
@@ -82,13 +82,14 @@ test('HTTP errors and unrelated TypeErrors cannot masquerade as local origin val
         }
       }
     );
+    input.service.readExchangeCount = async () => snapshot(0);
     const bridge = await safetyProvider(input).startScenario({ scenario: 'origin-aliases', runId });
     try {
       await assert.rejects(
         bridge.rejectInvalidOrigin({ binding: {}, origin: `${input.target.origin}/` })
       );
     } finally {
-      await bridge.close();
+      await assert.rejects(bridge.close());
     }
   }
 });

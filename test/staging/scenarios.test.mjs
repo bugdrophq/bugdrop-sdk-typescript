@@ -37,7 +37,7 @@ function testDouble({
           state.blocked = true;
         },
         setDeliveryIndeterminate() {},
-        evidence: async () => ({ exchanges: state.exchanges, outcomes: state.outcomes }),
+        evidence: async () => ({ exchanges: state.observations, outcomes: state.outcomes }),
         close: async () => {
           closed.push(name);
         },
@@ -49,10 +49,18 @@ function testDouble({
       assert.deepEqual(Object.keys(options).sort(), ['apiKey', 'endpoint']);
     }
     async createSubmissionToken(input) {
-      if ('userId' in input) throw new TypeError('unsupported');
-      if (fixtures.origin.invalid.includes(input.origin)) throw new TypeError('origin');
+      if ('userId' in input)
+        throw new TypeError('createSubmissionToken options contain unsupported fields');
+      if (fixtures.origin.invalid.includes(input.origin))
+        throw new TypeError('origin must be canonical');
       state.exchanges++;
       exchanges.push({ scenario: state.name, origin: input.origin });
+      state.observations ??= [];
+      state.observations.push({
+        sequence: state.exchanges,
+        sdkVersion: '0.1.0',
+        status: state.blocked || input.origin !== target.origin ? 403 : 200,
+      });
       if (failBaseline && state.name === 'origin' && input.origin === target.origin) {
         throw Object.assign(new Error('unavailable'), { code: 'request_failed', status: 503 });
       }
@@ -71,7 +79,7 @@ function testDouble({
   }
   const oracle = {
     async assertEvidence({ evidence, expected }) {
-      assert.equal(evidence.exchanges, expected.exchangeCount);
+      assert.equal(evidence.exchanges.length, expected.exchangeCount);
       const successes = ['origin', 'revoked', 'stale'].includes(expected.scenario)
         ? [true, false]
         : [true];

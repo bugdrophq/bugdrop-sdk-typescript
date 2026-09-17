@@ -123,6 +123,32 @@ all completed requests in the observation window, and report concurrent or ambig
 nonexclusive. Missing, stale, unscoped, incomplete, decreasing, or concurrent observations fail.
 These are collector requirements, not values to fabricate from the environment or SDK call count.
 
+An authority Durable Object counter observes only requests admitted to that object. A request can
+fail with HTTP 503 before admission, leaving its count unchanged. That counter alone therefore cannot
+establish complete network-attempt evidence. Both SDK scenario paths keep an in-memory transcript of
+actual packed SDK invocations and outcomes without replacing fetch. The private exact shape is
+`{ schemaVersion: 1, runId, scenario, applicationId, sdkVersion, complete, attempts }`; each attempt
+is `{ sequence, outcome, status }`. No input, token, error message, header, or body is retained.
+Snapshots and entries are copied and frozen. Successful SDK calls record `capability_issued` with
+null status; only the independent ingress observer supplies the actual successful HTTP status.
+
+Strict issuance HTTP 403 records `http_denied`. Expected local origin validation records
+`local_origin_rejected`; the intentional unsupported `userId` negative test records
+`local_input_rejected` only for its exact SDK TypeError. Other HTTP failures record `http_error`,
+missing-status request failures record `transport_error`, and unknown errors record `sdk_error`.
+Those failures permanently mark the transcript incomplete. Pending invocations are also incomplete.
+Missing HTTP status never implies local validation. Observer read failures and mismatched snapshots
+also invalidate the safety scenario; cleanup still runs and cannot make it successful.
+
+`evidence({ sdkAttemptTranscript })` receives this private transcript for collector reconciliation.
+The SDK separately compares independent `evidence.exchanges` against all issued/denied calls, requiring
+exact count, order, observed SDK version and successful 2xx versus denied 403 status. Origin snapshots
+require a healthy idle transcript and the matching count in addition to complete/exclusive remote
+observations. Missing/extra durable entries, pre-admission 503, transport errors, unavailable observers,
+or an unknown result cannot produce a complete proof, even if a later read returns zero or a plausible
+count. The remote collector must obtain its exchange entries independently, never manufacture them
+from the supplied transcript. This private reconciliation does not add fields to public evidence V1.
+
 The runner records each local proof as `client_validation_rejected` with zero network attempts and
 both snapshots. It separately sends a canonical wrong origin through the SDK, requires HTTP 403,
 and records `http_denied` with exactly one observed network attempt. Final `originChecks` must match
