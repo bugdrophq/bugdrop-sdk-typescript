@@ -23,6 +23,8 @@ const privateMethods = [
 // Test-only bridge. Private provider actions never become public SDK methods.
 export function safetyProvider({ consumer, provider, target, runId, fixtures }) {
   assert.equal(typeof provider.startSafetyScenario, 'function');
+  let active = false,
+    stopped = false;
   return {
     // The worker independently observed this target for this run before packing the client.
     async inspectTarget() {
@@ -30,8 +32,11 @@ export function safetyProvider({ consumer, provider, target, runId, fixtures }) 
     },
     async startScenario({ scenario, runId: requestedRunId }) {
       assert.equal(requestedRunId, runId);
-      const service = await provider.startSafetyScenario({ scenario, runId });
+      assert.equal(active || stopped, false, 'Previous SDK scenario is not safely closed');
+      active = true;
+      let service;
       try {
+        service = await provider.startSafetyScenario({ scenario, runId });
         assert.equal(typeof service.close, 'function');
         assert.equal(service.endpoint, target.endpoint);
         assert.equal(service.origin, target.origin);
@@ -97,9 +102,17 @@ export function safetyProvider({ consumer, provider, target, runId, fixtures }) 
           },
           async close() {
             try {
-              await service.close();
-            } finally {
+              try {
+                await observed.drain();
+              } finally {
+                await service.close();
+              }
               observed.assertComplete();
+            } catch (error) {
+              stopped = true;
+              throw error;
+            } finally {
+              active = false;
             }
           },
           submit({ capability, binding, reportBody, origin }) {
@@ -116,6 +129,8 @@ export function safetyProvider({ consumer, provider, target, runId, fixtures }) 
           },
         });
       } catch (error) {
+        stopped = true;
+        active = false;
         await service?.close?.();
         throw error;
       }

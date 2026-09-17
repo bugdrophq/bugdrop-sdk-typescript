@@ -8,6 +8,7 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
   for (const name of names) {
     const submissionId = randomUUID();
     const service = await provider.startScenario({ name, submissionId, runId });
+    let observed;
     try {
       assert.equal(service.endpoint, target.endpoint);
       assert.equal(service.origin, target.origin);
@@ -19,7 +20,7 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         'Fixture credentials are not staging credentials'
       );
       const client = new consumer.BugDrop({ apiKey, endpoint: target.endpoint });
-      const observed = observeAttempts(client, {
+      observed = observeAttempts(client, {
         runId,
         scenario: name,
         applicationId: target.applicationId,
@@ -125,7 +126,11 @@ export async function runScenarios({ consumer, fixtures, provider, oracle, targe
         true
       );
     } finally {
-      await service.close();
+      try {
+        await observed?.drain();
+      } finally {
+        await service.close();
+      }
     }
   }
 }

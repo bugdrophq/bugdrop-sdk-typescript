@@ -165,6 +165,26 @@ or collector implementation. Actual provider observations remain an external pre
 
 ## CI and operation
 
+The private `scripts/staging/observer.mjs` consumer accepts only an injected
+`transport(path, requestInit): Promise<Response>` capability and a separate canonical 32-byte
+base64url signing key. It has no URL or default fetch. The provider supplies approved transport;
+that handoff is not configured here. Its frozen application/installation/run/scenario scope exposes
+only `start`, `read`, and `close`; admission `begin`/`finish` remain ingress-owned.
+
+Observation schema 2 signs exact bytes and path with separate request/response v2 HMAC domains.
+Every request carries a fresh UUIDv4 nonce and requires its exact signed response echo. The consumer
+rejects v1, replay, wrong scope/lease, unknown fields, incomplete/nonexclusive reads, changed history,
+and late admissions between the final read and close. Requests are bounded to 1 KiB, responses to
+16 KiB, and transport plus response-body consumption to two seconds. Any failure stays failed even
+after a healthy read or cleanup. The provider must read and reconcile evidence before closing;
+close is still attempted after failures and cannot supply missing evidence.
+
+Scenario cleanup seals SDK invocation entry, aborts outstanding calls, and waits up to two seconds
+for settlement before attempting provider close. An outstanding call makes the scenario fail even
+if abort settles it. The safety bridge permanently blocks another scenario after failed cleanup or
+an undrained invocation, including after lease expiry; successful cleanup permits the next scenario.
+These local tests establish fail-closed consumer behavior, not remote observation or uninstall proof.
+
 The dispatch-only `Staging dogfood conformance` workflow has an unconditional staging job. Configure
 and approve the protected `bugdrop-staging` environment before dispatch. It fails on missing inputs;
 normal PR CI tests the gate's behavior and does not claim a remote run. Dogfood acceptance requires

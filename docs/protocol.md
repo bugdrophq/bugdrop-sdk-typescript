@@ -177,3 +177,13 @@ a separately hashed compatibility contract. Its private provider adapter uses th
 for capability issuance while the external provider owns fault injection, retention observations,
 and lifecycle completion evidence. Missing or incomplete safety attestations block the combined
 gate. These are test-only contracts; they do not add administration APIs to either public package.
+
+The private signed observer consumer follows `bugdrophq/bugdrop`'s
+`managed/staging/observation.md` at `eb6300b9be60a8805017ad70c0b0e25c5d10ac2b` (PR 390).
+Its schema 2 contract requires fresh UUIDv4 request nonces, exact signed response echoes, v2 HMAC
+domains, immutable lease scope, bounded bodies/deadlines, and strict v1 rejection. Independent
+synthetic transport fixtures in `test/staging/observer*.mjs` protect those assumptions, including
+same-lease replay rejection. `test/staging/drain.test.mjs` protects invocation isolation through
+cleanup and expiry. The admission-only remote counter still requires SDK transcript reconciliation;
+neither these fixtures nor that counter alone establish complete live staging evidence. Public V1
+contracts and the packed safety handshake remain unchanged.

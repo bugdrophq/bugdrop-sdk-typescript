@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 // SDK invocation observations supplement remote evidence; they are not an HTTP collector.
 export function observeAttempts(client, { runId, scenario, applicationId, sdkVersion }) {
   const attempts = [];
+  const active = new Set();
+  let sealed = false;
   let incomplete = false;
   const invalidate = () => {
     incomplete = true;
@@ -25,11 +27,47 @@ export function observeAttempts(client, { runId, scenario, applicationId, sdkVer
     snapshot,
     invalidate,
     assertComplete: () => network(),
+    async drain() {
+      sealed = true;
+      if (active.size === 0) return;
+      invalidate();
+      const pending = [...active];
+      for (const call of pending) call.controller.abort();
+      let timer;
+      try {
+        await Promise.race([
+          Promise.all(pending.map((call) => call.done)),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('SDK drain incomplete')), 2000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     async invoke(options, localRejection) {
+      if (sealed) {
+        invalidate();
+        throw new Error('SDK scenario closed');
+      }
+      const controller = new AbortController();
+      let settled;
+      const call = {
+        controller,
+        done: new Promise((resolve) => {
+          settled = resolve;
+        }),
+      };
+      active.add(call);
       const entry = { sequence: attempts.length + 1, outcome: 'pending', status: null };
       attempts.push(entry);
       try {
-        const result = await client.createSubmissionToken(options);
+        const result = await client.createSubmissionToken({
+          ...options,
+          signal: options.signal
+            ? AbortSignal.any([options.signal, controller.signal])
+            : controller.signal,
+        });
         assert.equal(localRejection, undefined, 'Expected SDK local rejection');
         entry.outcome = 'capability_issued';
         return result;
@@ -61,6 +99,9 @@ export function observeAttempts(client, { runId, scenario, applicationId, sdkVer
           invalidate();
         }
         throw error;
+      } finally {
+        active.delete(call);
+        settled();
       }
     },
     assertCount(count) {
