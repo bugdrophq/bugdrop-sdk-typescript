@@ -67,6 +67,9 @@ jobs:
       - name: Exercise packed SDK consumer exports
         run: node scripts/integration.mjs
 
+      - name: Verify fail-closed staging gate
+        run: npm run test:staging:unit
+
       - name: Verify publishable package contents
         run: npm run pack:check
 

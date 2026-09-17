@@ -1,0 +1,56 @@
+name: Staging dogfood conformance
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: staging-dogfood
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Required staging dogfood proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: bugdrop-staging
+    permissions:
+      contents: read
+    env:
+      BUGDROP_STAGING_TARGET: ${{ vars.BUGDROP_STAGING_TARGET }}
+      BUGDROP_STAGING_PROVIDER_REF: ${{ vars.BUGDROP_STAGING_PROVIDER_REF }}
+      BUGDROP_STAGING_ADAPTER: ${{ github.workspace }}/.staging-provider/${{ vars.BUGDROP_STAGING_ADAPTER_PATH }}
+      BUGDROP_STAGING_ADAPTER_SHA256: ${{ vars.BUGDROP_STAGING_ADAPTER_SHA256 }}
+      BUGDROP_STAGING_ORACLE: ${{ github.workspace }}/.staging-provider/${{ vars.BUGDROP_STAGING_ORACLE_PATH }}
+      BUGDROP_STAGING_ORACLE_SHA256: ${{ vars.BUGDROP_STAGING_ORACLE_SHA256 }}
+    steps:
+      - name: Checkout SDK
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.22.3
+          cache: npm
+      - name: Fail if staging inputs are absent (not remote proof)
+        run: node scripts/staging/ci-preflight.mjs
+      - name: Install SDK development dependencies
+        run: npx --yes npm@11.19.1 ci
+      - name: Validate and build SDK without staging secrets
+        run: npm run validate
+      - name: Checkout reviewed authoritative provider and safety oracle
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bugdrophq/bugdrop
+          ref: ${{ env.BUGDROP_STAGING_PROVIDER_REF }}
+          path: .staging-provider
+          persist-credentials: false
+      - name: Install locked provider dependencies without lifecycle scripts
+        working-directory: .staging-provider
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Require real staging conformance
+        env:
+          BUGDROP_STAGING_API_KEY: ${{ secrets.BUGDROP_STAGING_API_KEY }}
+        run: node scripts/staging.mjs

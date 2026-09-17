@@ -30,9 +30,12 @@
     "test:coverage": "vitest run --coverage",
     "test:security": "npm run build && node scripts/verify-browser-boundary.mjs",
     "typecheck": "tsc --project tsconfig.test.json --noEmit",
-    "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check && node scripts/integration.mjs",
+    "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check && node scripts/integration.mjs && npm run test:staging:unit",
     "test:integration": "npm run build && node scripts/integration.mjs",
-    "test:integration:service": "npm run build && node scripts/integration.mjs --service"
+    "test:integration:service": "npm run build && node scripts/integration.mjs --service",
+    "test:staging": "npm run build && node scripts/staging.mjs",
+    "test:staging:unit": "node --test test/staging/*.test.mjs",
+    "validate:dogfood": "npm run validate && npm run test:staging"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
