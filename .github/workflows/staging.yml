@@ -24,6 +24,8 @@ jobs:
       BUGDROP_STAGING_ADAPTER_SHA256: ${{ vars.BUGDROP_STAGING_ADAPTER_SHA256 }}
       BUGDROP_STAGING_ORACLE: ${{ github.workspace }}/.staging-provider/${{ vars.BUGDROP_STAGING_ORACLE_PATH }}
       BUGDROP_STAGING_ORACLE_SHA256: ${{ vars.BUGDROP_STAGING_ORACLE_SHA256 }}
+      BUGDROP_STAGING_SAFETY_RUNNER: ${{ github.workspace }}/.staging-provider/${{ vars.BUGDROP_STAGING_SAFETY_RUNNER_PATH }}
+      BUGDROP_STAGING_SAFETY_RUNNER_SHA256: ${{ vars.BUGDROP_STAGING_SAFETY_RUNNER_SHA256 }}
     steps:
       - name: Checkout SDK
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

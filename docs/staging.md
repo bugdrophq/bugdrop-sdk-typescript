@@ -17,16 +17,23 @@ Supply these through environment variables or the provider's server-only secret 
 command-line arguments, fixtures, PR text, or public framework prefixes:
 
 - `BUGDROP_STAGING_TARGET`: reviewed, non-secret JSON containing exactly `environment` (`staging`),
-  `accountId`, `endpoint`, `origin`, `serviceRevision`, `deploymentDigest`, `githubApp`,
+  `accountId`, `applicationId`, `endpoint`, `origin`, `serviceRevision`, `deploymentDigest`, `githubApp`,
   `dogfoodRepository`, and numeric-string `repositoryId`. Account ID is 32 lowercase hex characters;
   source revision is 40; approved deployed-artifact digest is 64. The endpoint must be an exact HTTPS
   `/v1/submission-capabilities` URL; origin must be exact canonical HTTPS. Known production endpoint
   defaults and IP literals are rejected; approved DNS hostnames are required. Names, account, artifact, and
   dedicated repository require approval.
+  `applicationId` is the approved operational application identity (1–100 letters, digits,
+  underscores or hyphens; never `UNAPPROVED`), not an end-user identifier. The provider must
+  independently substantiate it with the target; echoing the environment is not evidence.
 - `BUGDROP_STAGING_ADAPTER` and `BUGDROP_STAGING_ADAPTER_SHA256`: absolute path and SHA-256 of the
   reviewed authoritative remote provider entry point. No such remote provider is implemented yet.
 - `BUGDROP_STAGING_ORACLE` and `BUGDROP_STAGING_ORACLE_SHA256`: absolute path and SHA-256 of the reviewed
   safety oracle entry point. The safety task owns remote evidence schema/provenance.
+- `BUGDROP_STAGING_SAFETY_RUNNER` and `BUGDROP_STAGING_SAFETY_RUNNER_SHA256`: absolute path and SHA-256
+  of the authoritative `test/staging-safety/scenarios.mjs` runner. Its compatibility handshake must
+  match the SDK bridge before any target inspection or scenario action. Missing or incompatible
+  runner modules are failures; the seven SDK scenarios alone cannot satisfy this gate.
 - Nonproduction scenario-scoped API credentials via `resolveApiKey()`, backed by environment or
   provider secret mechanisms. `BUGDROP_STAGING_API_KEY` is available in the protected CI environment
   for providers that consume it. A shared dogfood credential alone is insufficient to isolate the
@@ -75,6 +82,50 @@ submission-binding vector, revocation, stale authorization, and indeterminate re
 Capability validation and SDK-version reporting run through the installed server export. Existing
 packed browser/ESM/CommonJS checks remain in normal CI; no real hosted-widget proof is claimed here.
 
+## Packed client safety bridge
+
+The exact private handshake is `packedSdkSafetyContract = { version: 2, sdkVersion: '0.1.0' }`.
+Older, missing, extra-field, or mismatched contracts fail before provider inspection. This versions
+the private runner bridge; public V1 requests and the safety evidence V1 schema do not change.
+
+After the seven SDK scenarios, the worker invokes the separately pinned `runRemoteSafety` through
+an SDK-owned test adapter. `startSafetyScenario({ scenario, runId })` is a private provider method;
+it is not a public SDK API or remote route. It supplies an isolated service with the exact target
+endpoint/origin, `resolveApiKey`, `submit`, `secretMarkers`, the authoritative runner's private
+control/retention/observation methods, and `close`. Setup failure closes the scenario. Successful
+setup binds private methods to their original service so provider state is retained.
+
+The bridge owns `mint`: it constructs the installed tarball's `BugDrop` with only the server API key
+and endpoint. It neither replaces fetch nor delegates capability issuance to a provider double.
+Only `request_failed` with status 403 becomes a denied mint; every other error propagates. Submission
+passes the original binding and report bytes to the existing private provider port. The observed SDK
+version comes from the packed consumer; the exact target and run ID come from this same worker run's
+read-only inspection and are never cached across runs. Provider secret markers remain in the isolated
+process alongside SDK-derived credential canaries.
+
+For malformed/noncanonical aliases, `rejectInvalidOrigin` calls the actual SDK and requires its
+local origin `TypeError`. It reads the provider's independent `readExchangeCount` before and after;
+both exact snapshots contain `{ runId, scenario: 'origin-aliases', applicationId, count,
+complete: true, exclusive: true }`. Counts are safe nonnegative integers and must remain equal.
+The provider must observe the approved run/application independently of the SDK process, include
+all completed requests in the observation window, and report concurrent or ambiguous activity as
+nonexclusive. Missing, stale, unscoped, incomplete, decreasing, or concurrent observations fail.
+These are collector requirements, not values to fabricate from the environment or SDK call count.
+
+The runner records each local proof as `client_validation_rejected` with zero network attempts and
+both snapshots. It separately sends a canonical wrong origin through the SDK, requires HTTP 403,
+and records `http_denied` with exactly one observed network attempt. Final `originChecks` must match
+the local alias checks followed by that HTTP denial, with counters advancing from the single
+successful baseline exchange to two exchanges overall. The SDK does not override fetch or turn a
+local exception into a fabricated HTTP response. These proof records belong only to runner version 2.
+
+All thirteen safety scenarios must return their complete expected attestations. The authoritative
+runner retains its explicit uninstall-completion block until durable edge and authoritative SQL
+acknowledgements can be independently observed. Missing publisher/control receipts, unavailable
+lifecycle or retention observations, partial results, and thrown attestation failures cannot produce
+`staging_passed`. This bridge adds no SQL mapping, administrator authority, acknowledgement schema,
+or collector implementation. Actual provider observations remain an external prerequisite.
+
 ## CI and operation
 
 The dispatch-only `Staging dogfood conformance` workflow has an unconditional staging job. Configure
@@ -88,6 +139,10 @@ In that environment, also configure the immutable 40-character `BUGDROP_STAGING_
 dependencies without lifecycle scripts, and injects the SDK secret only into the final isolated run.
 Additional provider secret access must be separately reviewed/configured when the remote provider
 exists. No workflow is dispatched and no GitHub environment is provisioned by this change.
+
+Also configure `BUGDROP_STAGING_SAFETY_RUNNER_PATH` relative to that same pinned provider checkout.
+CI requires all three module paths to remain inside the checkout; runner integrity and compatibility
+are checked again in the isolated child before private scenario work.
 
 Provider output and exception details are discarded in a child process. The parent emits only
 allowlisted status, missing variable names, and a validated service revision on success. A failed

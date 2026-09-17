@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { readConfiguration } from './config.mjs';
 import { installConsumer, readFixtures } from '../integration/packed-consumer.mjs';
 import { runScenarios } from './scenarios.mjs';
+import { assertSafetyRunner, runSafety } from './safety.mjs';
 
 async function pinnedModule(path, digest) {
   assert.equal(
@@ -23,6 +24,9 @@ try {
   assert.equal(config.status, 'configured');
   const provider = await pinnedModule(config.adapter, config.adapterDigest);
   const oracle = await pinnedModule(config.oracle, config.oracleDigest);
+  const runner = await pinnedModule(config.safetyRunner, config.safetyRunnerDigest);
+  assertSafetyRunner(runner);
+  assert.equal(typeof provider.startSafetyScenario, 'function');
   // This provider operation must be read-only. No scenario controls run before exact target match.
   const { runId, ...inspected } = await provider.inspectTarget();
   assert.match(runId, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
@@ -31,6 +35,7 @@ try {
   consumer = await installConsumer(repository);
   const fixtures = await readFixtures(repository);
   await runScenarios({ consumer, fixtures, provider, oracle, target: config.target, runId });
+  await runSafety({ consumer, fixtures, provider, runner, target: config.target, runId });
   await consumer.close();
   consumer = undefined;
   process.send?.({ status: 'staging_passed', serviceRevision: config.target.serviceRevision });

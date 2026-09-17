@@ -7,6 +7,8 @@ export const inputNames = [
   'BUGDROP_STAGING_ADAPTER_SHA256',
   'BUGDROP_STAGING_ORACLE',
   'BUGDROP_STAGING_ORACLE_SHA256',
+  'BUGDROP_STAGING_SAFETY_RUNNER',
+  'BUGDROP_STAGING_SAFETY_RUNNER_SHA256',
 ];
 
 export function readConfiguration(env) {
@@ -16,6 +18,7 @@ export function readConfiguration(env) {
     const target = JSON.parse(env.BUGDROP_STAGING_TARGET);
     const keys = [
       'environment',
+      'applicationId',
       'accountId',
       'endpoint',
       'origin',
@@ -28,6 +31,9 @@ export function readConfiguration(env) {
     if (!target || Object.keys(target).sort().join() !== keys.sort().join()) throw new Error();
     if (
       target.environment !== 'staging' ||
+      typeof target.applicationId !== 'string' ||
+      !/^[a-zA-Z0-9_-]{1,100}$/.test(target.applicationId) ||
+      target.applicationId === 'UNAPPROVED' ||
       !/^[a-f0-9]{32}$/.test(target.accountId) ||
       !/^[a-f0-9]{40}$/.test(target.serviceRevision) ||
       !/^[a-f0-9]{64}$/.test(target.deploymentDigest) ||
@@ -62,7 +68,7 @@ export function readConfiguration(env) {
       ['api.bugdrop.dev', 'widget.bugdrop.dev'].includes(endpoint.hostname)
     )
       throw new Error();
-    for (const kind of ['ADAPTER', 'ORACLE']) {
+    for (const kind of ['ADAPTER', 'ORACLE', 'SAFETY_RUNNER']) {
       if (
         !isAbsolute(env[`BUGDROP_STAGING_${kind}`]) ||
         !/^[a-f0-9]{64}$/.test(env[`BUGDROP_STAGING_${kind}_SHA256`])
@@ -76,6 +82,8 @@ export function readConfiguration(env) {
       adapterDigest: env.BUGDROP_STAGING_ADAPTER_SHA256,
       oracle: env.BUGDROP_STAGING_ORACLE,
       oracleDigest: env.BUGDROP_STAGING_ORACLE_SHA256,
+      safetyRunner: env.BUGDROP_STAGING_SAFETY_RUNNER,
+      safetyRunnerDigest: env.BUGDROP_STAGING_SAFETY_RUNNER_SHA256,
     };
   } catch {
     return { status: 'staging_invalid_configuration' };

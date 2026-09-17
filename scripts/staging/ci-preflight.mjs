@@ -11,7 +11,8 @@ if (
   config.status !== 'configured' ||
   !/^[a-f0-9]{40}$/.test(ref ?? '') ||
   !insideProvider(config.adapter) ||
-  !insideProvider(config.oracle)
+  !insideProvider(config.oracle) ||
+  !insideProvider(config.safetyRunner)
 ) {
   process.stdout.write(
     `${JSON.stringify(

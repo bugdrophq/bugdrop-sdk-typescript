@@ -171,3 +171,9 @@ coordinated test-only dependencies owned by the Cloudflare and safety tasks. The
 routes or V1 wire fields. No remote provider or approved staging target is currently available, so
 missing configuration is a nonzero prerequisite failure, never a skipped/passed remote test. The local
 adapter and local observation schema do not establish deployed service or hosted-widget conformance.
+
+The SDK gate also requires the authoritative `test/staging-safety/scenarios.mjs` runner through
+a separately hashed compatibility contract. Its private provider adapter uses the installed SDK
+for capability issuance while the external provider owns fault injection, retention observations,
+and lifecycle completion evidence. Missing or incomplete safety attestations block the combined
+gate. These are test-only contracts; they do not add administration APIs to either public package.

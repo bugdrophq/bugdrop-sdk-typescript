@@ -1,5 +1,6 @@
 export const target = {
   environment: 'staging',
+  applicationId: 'staging-app-test',
   deploymentDigest: 'e'.repeat(64),
   repositoryId: '123456',
   accountId: 'a'.repeat(32),
@@ -15,4 +16,6 @@ export const configured = {
   BUGDROP_STAGING_ADAPTER_SHA256: 'c'.repeat(64),
   BUGDROP_STAGING_ORACLE: '/not-installed/oracle.mjs',
   BUGDROP_STAGING_ORACLE_SHA256: 'd'.repeat(64),
+  BUGDROP_STAGING_SAFETY_RUNNER: '/not-installed/scenarios.mjs',
+  BUGDROP_STAGING_SAFETY_RUNNER_SHA256: 'f'.repeat(64),
 };
