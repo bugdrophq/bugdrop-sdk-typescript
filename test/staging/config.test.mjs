@@ -17,6 +17,10 @@ test('reject ambiguous/production/aliased configuration without reflecting value
     { endpoint: 'https://api.bugdrop.dev/v1/submission-capabilities' },
     { origin: 'https://dogfood.example.com.' },
     { origin: 'https://DOGFOOD.example.com' },
+    ...['127.0.0.1', '127.0.0.2', '127.255.255.254', '[::1]', '[::ffff:7f00:1]'].flatMap((host) => [
+      { origin: `https://${host}` },
+      { endpoint: `https://${host}/v1/submission-capabilities` },
+    ]),
     { endpoint: 'https://user:secret@staging.example.com/v1/submission-capabilities' },
     { endpoint: 'https://staging.example.com/v1/submission-capabilities?token=secret' },
     { endpoint: 'http://staging.example.com/v1/submission-capabilities' },

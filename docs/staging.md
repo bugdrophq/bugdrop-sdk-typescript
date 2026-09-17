@@ -20,8 +20,9 @@ command-line arguments, fixtures, PR text, or public framework prefixes:
   `accountId`, `endpoint`, `origin`, `serviceRevision`, `deploymentDigest`, `githubApp`,
   `dogfoodRepository`, and numeric-string `repositoryId`. Account ID is 32 lowercase hex characters;
   source revision is 40; approved deployed-artifact digest is 64. The endpoint must be an exact HTTPS
-  `/v1/submission-capabilities` URL; origin must be exact canonical HTTPS. Known production defaults
-  and loopback are rejected. Names, account, artifact, and dedicated repository require approval.
+  `/v1/submission-capabilities` URL; origin must be exact canonical HTTPS. Known production endpoint
+  defaults and IP literals are rejected; approved DNS hostnames are required. Names, account, artifact, and
+  dedicated repository require approval.
 - `BUGDROP_STAGING_ADAPTER` and `BUGDROP_STAGING_ADAPTER_SHA256`: absolute path and SHA-256 of the
   reviewed authoritative remote provider entry point. No such remote provider is implemented yet.
 - `BUGDROP_STAGING_ORACLE` and `BUGDROP_STAGING_ORACLE_SHA256`: absolute path and SHA-256 of the reviewed
