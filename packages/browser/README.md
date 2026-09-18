@@ -3,6 +3,12 @@
 Typed loader/controller for BugDrop's hosted widget. The package does not bundle or reimplement the
 widget.
 
+The current simple installation remains supported. Migration is optional and manual; importing
+this package does not claim or enroll an existing integration. After configuring the Application
+and backend token endpoint, deliberately replace the old widget script and reload the migrated
+page before calling `init`. Do not run both installations on one page. See the repository
+[manual migration guidance](../../docs/architecture.md#direct-script-tag-installation).
+
 ```ts
 import { BugDrop } from '@bugdrop/browser';
 

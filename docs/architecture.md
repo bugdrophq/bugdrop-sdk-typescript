@@ -19,8 +19,9 @@ artifacts have no private runtime dependency.
 The browser package creates a script element for BugDrop's hosted versioned widget, supplies
 `data-application-id`, and installs a narrowly scoped global function that accepts the current
 submission binding and returns a short-lived capability token. It validates the binding before
-calling the customer's provider and proxies the widget's public controller methods after the
-`bugdrop:ready` event. It contains no widget UI, submission implementation, repository selection,
+calling the customer's provider and proxies the widget's public controller methods after its own
+script loads or emits `bugdrop:ready` while executing. Other scripts' ready events cannot initialize
+the SDK controller. It contains no widget UI, submission implementation, repository selection,
 or server exchange client.
 
 The server package owns capability issuance from the customer's perspective. Its internal API-key
@@ -55,6 +56,19 @@ compatibility workaround because doing so would return repository authority to t
 browser.
 
 ## Direct script-tag installation
+
+The current simple system remains supported. Moving an integration to Application-based
+authentication is optional and manual. Creating an account or importing the SDK does not claim or
+enroll an existing integration, associate its reports with an Application, or backfill managed
+identity or telemetry. Existing simple integrations can continue on other pages or applications.
+
+When deliberately migrating a page, first configure the Application and its backend token endpoint
+with the customer's access controls. Then replace that page's old widget script with the chosen
+managed installation and reload the page. Do not initialize both installations on the same page:
+the SDK rejects an existing widget or script carrying repository/token-provider configuration,
+including one that has not finished loading. The SDK does not remove the old installation for you.
+Test the managed flow before completing the manual change; a managed failure never retries through
+the current public system. The production-readiness gates above still apply.
 
 Direct authenticated installation keeps the same capability boundary as `@bugdrop/browser`. The
 customer's authenticated token endpoint returns the complete versioned capability response:

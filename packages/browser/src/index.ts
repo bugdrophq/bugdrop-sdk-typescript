@@ -97,7 +97,13 @@ export class BugDrop {
       }
       return activeController;
     }
-    if (window.BugDrop) {
+    if (
+      window.BugDrop ||
+      Array.from(document.scripts).some(
+        (script) =>
+          script.dataset.repo !== undefined || script.dataset.authTokenProvider !== undefined
+      )
+    ) {
       throw new Error('A BugDrop widget is already installed on this page');
     }
 
@@ -174,11 +180,14 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
       resolve(api);
     };
 
-    const onReady = () => finish();
+    // The global event is shared with direct installations; only this script owns our readiness.
+    const onReady = () => {
+      if (document.currentScript === script) finish();
+    };
     const onError = () => fail('Unable to load the BugDrop widget');
     const onLoad = () => finish();
 
-    window.addEventListener('bugdrop:ready', onReady, { once: true });
+    window.addEventListener('bugdrop:ready', onReady);
     script.addEventListener('error', onError, { once: true });
     script.addEventListener('load', onLoad, { once: true });
     document.head.appendChild(script);
