@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
+import { checkOptInExports } from './opt-in-exports.mjs';
 
 export async function installConsumer(repository) {
   const directory = await realpath(await mkdtemp(join(tmpdir(), 'bugdrop-consumer-')));
@@ -75,6 +76,7 @@ export async function installConsumer(repository) {
       guard.outputFiles[0].text,
       /node:crypto|bd_api_v1|bd_auth_v1|Authorization/
     );
+    await checkOptInExports(directory, repository);
     return {
       directory,
       versions,
