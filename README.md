@@ -73,6 +73,12 @@ Direct script-tag installation remains supported as a first-class alternative to
 authenticated provider returns only the opaque token string to the widget; see the
 [architecture](docs/architecture.md#direct-script-tag-installation) for the complete boundary.
 
+The current simple system remains supported. Migration is optional and manual: account creation
+and SDK imports do not automatically claim or enroll existing integrations or backfill their
+identity or telemetry. To migrate a page, deliberately configure its Application and backend token
+endpoint, replace its old widget script, and reload. Do not run both installations on that page;
+other existing integrations can continue unchanged. See the linked manual migration guidance.
+
 ## Development
 
 Repository development requires Node.js 20.19 or newer. The published server package targets

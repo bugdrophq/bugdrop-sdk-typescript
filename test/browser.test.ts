@@ -47,7 +47,7 @@ describe('@bugdrop/browser', () => {
 
     const calls: string[] = [];
     window.BugDrop = createWidgetApi(calls);
-    window.dispatchEvent(new CustomEvent('bugdrop:ready'));
+    script!.dispatchEvent(new Event('load'));
     await controller.open();
     await controller.close();
     await controller.hide();
@@ -91,7 +91,7 @@ describe('@bugdrop/browser', () => {
     });
     const script = document.querySelector<HTMLScriptElement>('script')!;
     window.BugDrop = createWidgetApi([]);
-    window.dispatchEvent(new CustomEvent('bugdrop:ready'));
+    script!.dispatchEvent(new Event('load'));
     await controller.ready;
     const provider =
       window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
@@ -235,7 +235,7 @@ describe('@bugdrop/browser failure handling', () => {
     });
     const script = document.querySelector<HTMLScriptElement>('script')!;
     window.BugDrop = createWidgetApi([]);
-    window.dispatchEvent(new CustomEvent('bugdrop:ready'));
+    script!.dispatchEvent(new Event('load'));
     await controller.ready;
     const provider =
       window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
@@ -249,7 +249,7 @@ describe('@bugdrop/browser failure handling', () => {
     const controller = BugDrop.init({ applicationId: 'app_public_123', tokenProvider });
     const script = document.querySelector<HTMLScriptElement>('script')!;
     window.BugDrop = createWidgetApi([]);
-    window.dispatchEvent(new CustomEvent('bugdrop:ready'));
+    script!.dispatchEvent(new Event('load'));
     await controller.ready;
     const provider =
       window[script.dataset.authTokenProvider as `__bugdropSdkTokenProvider_${string}`];
