@@ -69,9 +69,13 @@ Mint-linearization design `/tmp/bugdrop-mint-linearization-design-v1.md`, SHA256
 `fd3d2da8f90c0754c02718da946ec5cb691db4a29433aceeefcbb0430779a91c`,
 was read in full. Terminal UNKNOWN/no-remint is representable by the client category
 exchange_unconfirmed, but does not satisfy exact completed-signature accounting.
-Owners must explicitly choose whether the required metric is actual signatures S or
-durably authorized issuance A. If S, a stronger qualified signer boundary is needed.
-This proposal does not silently change the approved meaning of actual mint.
+The user has explicitly approved A, durably authorized issuance, as the official V1
+mint metric. This settles the metric decision; it does not change wire protocol versions.
+A is the unique durable authorized-result plus pending-marker commit after an observed
+signature and current authority/expiry checks. Known signatures S and unresolved
+possible-signature UNKNOWN remain separate evidence; A is not a claim of exact S.
+Historical A=1 survives lost response, later revocation or expiry without implying
+client success, current usability or permission to replace the issuance.
 
 Freeze one live owner epoch per spent signing permit. Timeout seals response success;
 late callbacks cannot release, reset, overwrite or resurrect terminal state. A still-live
@@ -82,14 +86,17 @@ epoch/drain mechanics and revocation-to-egress ordering remain runtime review ga
 Reserve authorizes at most one live signing invocation; durable admission authorizes
 release, subject to current revocation and submission verification. They are different
 linearization points. No distributed atomic signing claim is made. A crash between
-crypto completion and accounting remains UNKNOWN and cannot be re-signed. Exact actual
-mint counts remain blocked unless an independently durable signer boundary is supplied;
-tests with signer instrumentation do not establish recoverable production exact counts.
+crypto completion and accounting remains UNKNOWN and cannot be re-signed. Exact completed-signature
+counts S remain unavailable without an independently durable signer boundary; this no
+longer blocks the approved choice of metric A. Tests with signer instrumentation do
+not establish recoverable production exact S. Durable A accounting itself still needs
+the reviewed ledger transition and runtime qualification; absent or failed reads cannot
+be treated as A=0, and UNKNOWN is never silently converted to S=0.
 
 The chosen app-scoped storage still requires bounded capacity/expiry handling and
 qualification of async interleaving with revocation. Storage exhaustion must fail before
 reservation, not evict live evidence or fall back to stateless signing. Implementation
-stays closed pending cross-owner acceptance of these availability/accounting semantics,
+stays closed pending cross-owner acceptance of availability/custody policy and qualification of A accounting,
 trusted scope publication, credential provisioning and exact P6/P7 outcome transport.
 This candidate may be reviewed in parts but must not be called a frozen P0 contract
 while those prerequisites remain open.

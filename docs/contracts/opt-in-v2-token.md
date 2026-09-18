@@ -22,7 +22,11 @@ matched to trusted key registration and configured application scope before rout
 jti is a NEW cryptographically random UUIDv4 capability handle allocated once in the
 original reservation, unrelated to attempt/submission/tenant/application/destination/
 credential/generation IDs. Never derive it from scope, payload or a user identifier.
-It is linkable for the bounded capability lifetime, not a reporter pseudonym.
+Its authorization lasts at most five minutes, but its private handle/public-alias→scope
+mapping remains linkable through the original issuer reservation retention window and
+any separately disclosed backup retention. Browser/recipient copies may remain
+correlatable after expiry; expiry promises neither unlinkability nor erasure of external
+copies. It is not a reporter pseudonym.
 A reservation handle collision fails closed without overwriting or selecting another
 handle; no replacement handle after timeout, lost response, restart or UNKNOWN.
 iat=floor(genuine issuer signing clock/1000), exp=iat+300; neither derives from client

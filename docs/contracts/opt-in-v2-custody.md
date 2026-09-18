@@ -4,13 +4,13 @@ Uninstall retention Option A does NOT approve the following P0 storage. These ar
 exact proposed limits requiring joint data/privacy/runtime acceptance before any
 implementation, credentials or rollout. No new aggregate or indefinite fence is implied.
 
-| Record                                                                                  | Proposed custody and clock                                                                                                                             | Access and exclusion                                                                                     |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Original scope, intent, state, signing uncertainty, confirmation, capability commitment | Private P5 authority only; retentionDeadline=original reservedAt+720h; immutable across retries/recovery                                               | Scoped private authority API only; absent from P6/P7 SQL, logs, traces, analytics and browser storage    |
-| Client pending intent and status                                                        | Unconfirmed: memory only for exchange8s+grace5s. Confirmed optional server store: signed issuer retentionDeadline=original reservedAt+720h, no refresh | No key/root/authSecret/token; no browser persistence or general analytics                                |
-| Historical catalog and public confirmation key                                          | Until maximum retentionDeadline of any referencing reservation+5min; max128 catalog snapshots and128 keys                                              | Verification-only history; no extension of reservation evidence or credential authority                  |
-| Confirmation private signing key                                                        | Active signing service only, independently reviewed key-rotation/destruction policy                                                                    | Historical public-key retention does not authorize retaining private keys                                |
-| Original normalized delivery tuple                                                      | Atomically transferred into qualified original delivery record before acknowledging the join; existing delivery accepted_at+720h                       | P6/P7 receives only typed17-input command; no confirmation, intentDigest, capabilityDigest or raw intent |
+| Record                                                                                                                     | Proposed custody and clock                                                                                                                             | Access and exclusion                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Random handle/public-alias→original scope mapping, intent, state, signing uncertainty, confirmation, capability commitment | Private P5 authority only; retentionDeadline=original reservedAt+720h; immutable across retries/recovery                                               | Scoped private authority API only; absent from P6/P7 SQL, logs, traces, analytics and browser storage    |
+| Client pending intent and status                                                                                           | Unconfirmed: memory only for exchange8s+grace5s. Confirmed optional server store: signed issuer retentionDeadline=original reservedAt+720h, no refresh | No key/root/authSecret/token; no browser persistence or general analytics                                |
+| Historical catalog and public confirmation key                                                                             | Until maximum retentionDeadline of any referencing reservation+5min; max128 catalog snapshots and128 keys                                              | Verification-only history; no extension of reservation evidence or credential authority                  |
+| Confirmation private signing key                                                                                           | Active signing service only, independently reviewed key-rotation/destruction policy                                                                    | Historical public-key retention does not authorize retaining private keys                                |
+| Original normalized delivery tuple                                                                                         | Atomically transferred into qualified original delivery record before acknowledging the join; existing delivery accepted_at+720h                       | P6/P7 receives only typed17-input command; no confirmation, intentDigest, capabilityDigest or raw intent |
 
 Internal tenant/generation/credential/attempt references are linkable operational data.
 The returned JWS is openly decodable but contains only protocol/issuer/audience/time
@@ -18,8 +18,11 @@ and a fresh random capability handle. Operational tenant/application/destination
 credential/generation/attempt scope is held in the issuer ledger, absent from token,
 confirmation and browser response. Confirmation contains bounded digests and issuer
 clocks but is returned only to the trusted server; the reference backend forwards only
-the capability envelope. The random handle is linkable short-lived authorization data,
-not confidential ciphertext or a user pseudonym. Browser code can read it; never put it
+the capability envelope. The random handle authorizes use for at most five minutes but remains privately
+linkable to original scope until issuer reservedAt+720h, plus any separately disclosed
+backup retention. Browser/recipient copies can remain correlatable after exp; token
+expiry does not erase external copies or promise unlinkability. It is not confidential
+ciphertext or a user pseudonym. Browser code can read it; never put it
 in analytics or general logs. Exact scope remains required for the private ledger's
 original authority checks, not a reason to expose operational identifiers to browser.
 capabilityDigest is a secret-derived protocol commitment; a signed confirmation binds

@@ -199,7 +199,8 @@ assumptions against runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
 `0c5ce62f85a88c61fa9605d54f7689f435194c04`. Synthetic `opt-in*.v2.json` fixtures and
 `test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order;
 they do not qualify deployed authentication, original-generation publication, atomic
-signing, queue/SQL delivery or account UI. Exact signing-accounting semantics and those
-new authority/transport prerequisites remain review gates. Existing exports and V1
+signing, queue/SQL delivery or account UI. The official mint metric is approved as
+durably authorized issuance A, with known signatures and UNKNOWN separate. Durable
+accounting qualification and new custody/authority/transport prerequisites remain gates. Existing exports and V1
 contracts are unchanged; no runtime implementation or publication is authorized by
 this proposal.

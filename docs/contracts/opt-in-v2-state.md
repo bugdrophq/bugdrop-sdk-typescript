@@ -71,6 +71,9 @@ lost. Different attempt for same reserved submission or any changed immutable fa
 returns409 binding_conflict. Client may not remint a nonce or submission to repair this.
 This sacrifices retry availability, deliberately avoiding durable bearer storage.
 
+The approved official V1 mint metric is A: the unique durable authorized-result and
+pending-marker commit after observed signing and current authority/expiry checks. This
+is an accounting decision, not a wire-version change or exact-signature-count claim.
 Counters distinguish R=reserved permits, S=known completed signatures, U=possible
 signatures where crash left reserved/signing, A=historical durably authorized results (not current usability),
 C=client verified confirmations, D=delivery. S may be UNKNOWN after crash between signing
