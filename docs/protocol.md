@@ -187,3 +187,23 @@ same-lease replay rejection. `test/staging/drain.test.mjs` protects invocation i
 cleanup and expiry. The admission-only remote counter still requires SDK transcript reconciliation;
 neither these fixtures nor that counter alone establish complete live staging evidence. Public V1
 contracts and the packed safety handshake remain unchanged.
+
+## P0 opt-in contract (frozen; not implemented)
+
+The [V2 wire contract](contracts/opt-in-v2.md), [state and ownership contract](contracts/opt-in-v2-state.md),
+[original authority gates](contracts/opt-in-v2-authority.md) and
+[delivery projection contract](contracts/opt-in-v2-outcomes.md),
+[token isolation](contracts/opt-in-v2-token.md) and
+[approved P0 custody policy](contracts/opt-in-v2-custody.md) record cross-repository
+assumptions against runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
+`0c5ce62f85a88c61fa9605d54f7689f435194c04`. Synthetic `opt-in*.v2.json` fixtures and
+`test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order;
+they do not qualify deployed authentication, original-generation publication, atomic
+signing, queue/SQL delivery or account UI. The official mint metric is approved as
+durably authorized issuance A, with known signatures and UNKNOWN separate. Durable
+accounting qualification and authority/transport prerequisites remain gates. The user
+accepted original issuer reservedAt+720h private-state retention, finite replay prevention
+and fail-closed ambiguity/storage behavior. P0 is frozen; listed implementation interfaces
+and qualification requirements remain open, with runtime work still on hold. Existing exports and V1
+contracts are unchanged; no runtime implementation or publication is authorized by
+this proposal.

@@ -1,0 +1,11 @@
+{
+  "notice": "TEST ONLY: not a production release allowlist",
+  "catalog": {
+    "schemaVersion": 1,
+    "normalizationVersion": 1,
+    "server": ["0.1.0"],
+    "browser": ["0.1.0", "0.2.0"],
+    "widget": []
+  },
+  "catalogDigest": "d3ac8a92c537d29b53f4d4fe6a8a73a5358997cda02ab25b76f61fa4304e6995"
+}

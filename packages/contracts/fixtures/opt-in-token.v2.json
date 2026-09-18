@@ -1,0 +1,98 @@
+{
+  "notice": "TEST ONLY: public scalar d=2, synthetic scope; no deployed service key. Route expectations are unimplemented contract requirements.",
+  "header": {
+    "alg": "ES256",
+    "kid": "cap-v2-fixture",
+    "typ": "bugdrop-managed-capability-v2"
+  },
+  "claims": {
+    "protocolVersion": 2,
+    "iss": "bugdrop-managed-staging-v2",
+    "aud": "bugdrop-managed-staging-ingress-v2",
+    "publicApplicationId": "app_fixture",
+    "jti": "88888888-8888-4888-8888-888888888888",
+    "iat": 1800000000,
+    "exp": 1800000300
+  },
+  "publicKey": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "fPJ7GI0DT36KUjgDBLUaw8CJaeJ38hs1pgtI_EdmmXg",
+    "y": "B3dVENuO0EApPZrGn3Qw27p9reY86YIpngS3nSJ4c9E"
+  },
+  "envelope": {
+    "schemaVersion": 1,
+    "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNhcC12Mi1maXh0dXJlIiwidHlwIjoiYnVnZHJvcC1tYW5hZ2VkLWNhcGFiaWxpdHktdjIifQ.eyJwcm90b2NvbFZlcnNpb24iOjIsImlzcyI6ImJ1Z2Ryb3AtbWFuYWdlZC1zdGFnaW5nLXYyIiwiYXVkIjoiYnVnZHJvcC1tYW5hZ2VkLXN0YWdpbmctaW5ncmVzcy12MiIsInB1YmxpY0FwcGxpY2F0aW9uSWQiOiJhcHBfZml4dHVyZSIsImp0aSI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTg4ODg4ODg4ODg4OCIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwMzAwfQ.1EdercTG-1vM0nRoVneDcfoFbu0xId_oKZjMfYInCZna6GwuRlEW_a72O4baekU-yneOUPoA7w67lAvCiftTaw",
+    "expiresAt": "2027-01-15T08:05:00.000Z"
+  },
+  "capabilityDigest": "a35e2871234d980498d80ff91d454ec513b603a48448e55eda189aa16f3301c7",
+  "legacyRoutes": [
+    {
+      "id": "local-ingress",
+      "policy": "v1-only"
+    },
+    {
+      "id": "local-delivery",
+      "policy": "v1-only"
+    },
+    {
+      "id": "local-receipt-any-post",
+      "policy": "v1-only"
+    },
+    {
+      "id": "local-receipt-fresh-check",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-submission",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-delivery",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-receipt-any-post",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-receipt-fresh-check",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-github-attempt",
+      "policy": "v1-only"
+    },
+    {
+      "id": "staging-github-preflight",
+      "policy": "v1-only"
+    },
+    {
+      "id": "hosted-flat-auth-on",
+      "policy": "reject-managed"
+    },
+    {
+      "id": "hosted-flat-auth-off",
+      "policy": "reject-managed"
+    },
+    {
+      "id": "hosted-structured-auth-on",
+      "policy": "reject-managed"
+    },
+    {
+      "id": "hosted-structured-auth-off",
+      "policy": "reject-managed"
+    },
+    {
+      "id": "hosted-recipe-fallback",
+      "policy": "reject-managed"
+    }
+  ],
+  "ledgerStates": ["reserved", "failed-unconfirmed", "admitted"],
+  "expectedLegacyDecision": "reject",
+  "expectedUpgradedDecision": {
+    "reserved": "reject",
+    "failed-unconfirmed": "reject",
+    "admitted": "allow-only-with-fresh-authority-and-matching-commitment"
+  }
+}
