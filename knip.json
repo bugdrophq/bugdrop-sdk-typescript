@@ -7,10 +7,18 @@
         "vitest.config.ts",
         "test/staging/*.test.mjs",
         "scripts/staging/worker.mjs",
-        "scripts/staging/observer.mjs"
+        "scripts/staging/observer.mjs",
+        "examples/opt-in-backend/handler.ts",
+        "examples/opt-in-backend/transport.ts"
       ],
-      "project": ["scripts/**/*.mjs", "test/**/*.ts", "*.{ts,mjs}", "test/staging/**/*.mjs"],
-      "ignoreDependencies": ["@bugdrop/server"]
+      "project": [
+        "scripts/**/*.mjs",
+        "test/**/*.ts",
+        "*.{ts,mjs}",
+        "test/staging/**/*.mjs",
+        "examples/opt-in-backend/*.ts"
+      ],
+      "ignoreDependencies": ["@bugdrop/server", "@bugdrop/browser"]
     },
     "packages/browser": {
       "entry": ["src/index.ts", "src/opt-in.ts"],
