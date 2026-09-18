@@ -113,7 +113,8 @@ Outcome TTL=original outcome acceptedAt+720h (a distinct qualified event clock),
 or missing accounting, report incomplete, never reconstruct from current build.
 
 Ambiguous sent request: stop caller success, no capability use, automatic retry, downgrade,
-replacement nonce or replacement mint. Retain private original attempt context; operator
+replacement nonce or replacement mint. Retain original attempt context only within the private memory/confirmed-server custody
+policy in opt-in-v2-custody.md; operator
 must drain/seal observations for the8s exchange +5s grace and account independently for
 late work. If observer incomplete, remain unconfirmed. Capability may remain usable until
 its original <=5min expiry; wait expiry or use separately approved existing revocation,

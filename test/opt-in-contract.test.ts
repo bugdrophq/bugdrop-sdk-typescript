@@ -79,6 +79,8 @@ describe('P0 V2 normative synthetic vectors (not runtime qualification)', () => 
     'kid',
     'intentDigest',
     'capabilityDigest',
+    'reservedAt',
+    'retentionDeadline',
     'admittedAt',
     'expiresAt',
     'signature',

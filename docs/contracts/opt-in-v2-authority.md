@@ -39,13 +39,20 @@ from current mappings, provider IDs, configurationVersion or delivery receipts.
 P0 client attemptId and issuer reservation time are distinct. Store one issuer clock
 sample reservedAt in the first durable reservation, with retentionDeadline=reservedAt
 +720 hours. Neither restart, duplicate, failed confirmation nor continuation changes it.
-Store admittedAt once at the successful second transition; it must satisfy
+Sample admittedAt once for the second authorization decision; sign the confirmation
+using that sample, then atomically persist it with the outcome before any release.
+This is not an exact physical COMMIT timestamp; it must satisfy
 issuedAt-5,000<=admittedAt<original expiresAt, using genuine issuer time. Confirmation and normalized versions refer to this same attempt.
 No separate recovery attempt or new submission may replace the original attempt to
-repair an ambiguous exchange. Client pending context contains only the original binding,
-intent and status, never credential material or token; expires no later than the original
-reservation evidence window, with client issuedAt+720h as its conservative upper bound.
-Do not persist this context in browser storage or send it to general analytics.
+repair an ambiguous exchange. Client pending context contains only original binding, intent and status in memory
+for the bounded8s exchange+5s grace. Success is sealed at8s; grace permits accounting
+only, never capability release, retry or an extension by a late callback. This local
+cleanup deadline is neither proof of issuer reservation nor proof of completed drain. It is not durably persisted while unconfirmed:
+issuer reservedAt is unknown and must not be fabricated from client issuedAt. A verified
+confirmation carries signed original reservedAt and retentionDeadline=reservedAt+720h;
+any optional durable confirmed SERVER context expires at that exact issuer deadline.
+No browser storage or general analytics custody is selected. Losing client context
+never authorizes a retry; original issuer uniqueness and terminal UNKNOWN still apply.
 
 F2 original workId/admittedAt/workDeadline are SEPARATE uninstall workflow facts.
 First authenticated intake must store workDeadline=original admittedAt+720h atomically

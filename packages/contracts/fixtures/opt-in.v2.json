@@ -49,17 +49,19 @@
     "schemaVersion": 2,
     "capability": {
       "schemaVersion": 1,
-      "token": "TEST-ONLY-NOT-A-USABLE-CAPABILITY",
-      "expiresAt": "2027-01-15T08:04:00.000Z"
+      "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNhcC12Mi1maXh0dXJlIiwidHlwIjoiYnVnZHJvcC1tYW5hZ2VkLWNhcGFiaWxpdHktdjIifQ.eyJwcm90b2NvbFZlcnNpb24iOjIsImlzcyI6ImJ1Z2Ryb3AtbWFuYWdlZC1zdGFnaW5nLXYyIiwiYXVkIjoiYnVnZHJvcC1tYW5hZ2VkLXN0YWdpbmctaW5ncmVzcy12MiIsInB1YmxpY0FwcGxpY2F0aW9uSWQiOiJhcHBfZml4dHVyZSIsImp0aSI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTg4ODg4ODg4ODg4OCIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwMzAwfQ.1EdercTG-1vM0nRoVneDcfoFbu0xId_oKZjMfYInCZna6GwuRlEW_a72O4baekU-yneOUPoA7w67lAvCiftTaw",
+      "expiresAt": "2027-01-15T08:05:00.000Z"
     },
     "confirmation": {
       "schemaVersion": 2,
       "kid": "fixture-confirmation",
       "intentDigest": "c3e655f1b1171a2ed53c49bf7417eb9bed4ed9bebfa8848273e4c3d29515a3c3",
-      "capabilityDigest": "b45d094b41ca27f85f260f0300cd98525526a9114be1f4677c174e57810f4a84",
+      "capabilityDigest": "a35e2871234d980498d80ff91d454ec513b603a48448e55eda189aa16f3301c7",
+      "reservedAt": 1800000000000,
+      "retentionDeadline": 1802592000000,
       "admittedAt": 1800000001000,
       "expiresAt": 1800000060000,
-      "signature": "8F-T3mE432laFHVDa9THZ8S7GhjSs_yU8ETMqlgS7HkiAYMSvIxbba95G01OKnzhWwaCbE7qbhblnbYB7PAdGQ"
+      "signature": "Y8iloxQP-ixoCp6V4yLxjpuMDh9TfcolJLLkl-hUYGUjlbkkt7FhpXt7R2IX3c2r8gZ4ACLbRpzDV7hl4Rk7pA"
     }
   },
   "confirmationPublicKey": {

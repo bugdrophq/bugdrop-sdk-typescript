@@ -9,22 +9,10 @@
     "protocolVersion": 2,
     "iss": "bugdrop-managed-staging-v2",
     "aud": "bugdrop-managed-staging-ingress-v2",
-    "tenantId": "44444444-4444-4444-8444-444444444444",
-    "applicationId": "55555555-5555-4555-8555-555555555555",
     "publicApplicationId": "app_fixture",
-    "destinationId": "66666666-6666-4666-8666-666666666666",
-    "credentialId": "22222222-2222-4222-8222-222222222222",
-    "keyId": "ICEiIyQlJicoKSorLC0uLw",
-    "installationGeneration": "33333333-3333-4333-8333-333333333333",
-    "configurationVersion": 1,
-    "authorizationVersion": 1,
-    "origin": "https://customer.example.test",
-    "attemptId": "11111111-1111-4111-8111-111111111111",
-    "submissionId": "fixture-submission",
-    "payloadDigest": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+    "jti": "88888888-8888-4888-8888-888888888888",
     "iat": 1800000000,
-    "exp": 1800000300,
-    "jti": "11111111-1111-4111-8111-111111111111"
+    "exp": 1800000300
   },
   "publicKey": {
     "kty": "EC",
@@ -34,10 +22,10 @@
   },
   "envelope": {
     "schemaVersion": 1,
-    "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNhcC12Mi1maXh0dXJlIiwidHlwIjoiYnVnZHJvcC1tYW5hZ2VkLWNhcGFiaWxpdHktdjIifQ.eyJwcm90b2NvbFZlcnNpb24iOjIsImlzcyI6ImJ1Z2Ryb3AtbWFuYWdlZC1zdGFnaW5nLXYyIiwiYXVkIjoiYnVnZHJvcC1tYW5hZ2VkLXN0YWdpbmctaW5ncmVzcy12MiIsInRlbmFudElkIjoiNDQ0NDQ0NDQtNDQ0NC00NDQ0LTg0NDQtNDQ0NDQ0NDQ0NDQ0IiwiYXBwbGljYXRpb25JZCI6IjU1NTU1NTU1LTU1NTUtNDU1NS04NTU1LTU1NTU1NTU1NTU1NSIsInB1YmxpY0FwcGxpY2F0aW9uSWQiOiJhcHBfZml4dHVyZSIsImRlc3RpbmF0aW9uSWQiOiI2NjY2NjY2Ni02NjY2LTQ2NjYtODY2Ni02NjY2NjY2NjY2NjYiLCJjcmVkZW50aWFsSWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJrZXlJZCI6IklDRWlJeVFsSmljb0tTb3JMQzB1THciLCJpbnN0YWxsYXRpb25HZW5lcmF0aW9uIjoiMzMzMzMzMzMtMzMzMy00MzMzLTgzMzMtMzMzMzMzMzMzMzMzIiwiY29uZmlndXJhdGlvblZlcnNpb24iOjEsImF1dGhvcml6YXRpb25WZXJzaW9uIjoxLCJvcmlnaW4iOiJodHRwczovL2N1c3RvbWVyLmV4YW1wbGUudGVzdCIsImF0dGVtcHRJZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSIsInN1Ym1pc3Npb25JZCI6ImZpeHR1cmUtc3VibWlzc2lvbiIsInBheWxvYWREaWdlc3QiOiJCd2NIQndjSEJ3Y0hCd2NIQndjSEJ3Y0hCd2NIQndjSEJ3Y0hCd2NIQndjIiwiaWF0IjoxODAwMDAwMDAwLCJleHAiOjE4MDAwMDAzMDAsImp0aSI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMSJ9.EJSM1KShDngaEIQqCYKsGgJiaAgTAWbK5eGOI9F_BUWhnyIjw3yHPfUsR0Z5SpD7shImX7d-hJSgbYGf50D-5Q",
+    "token": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImNhcC12Mi1maXh0dXJlIiwidHlwIjoiYnVnZHJvcC1tYW5hZ2VkLWNhcGFiaWxpdHktdjIifQ.eyJwcm90b2NvbFZlcnNpb24iOjIsImlzcyI6ImJ1Z2Ryb3AtbWFuYWdlZC1zdGFnaW5nLXYyIiwiYXVkIjoiYnVnZHJvcC1tYW5hZ2VkLXN0YWdpbmctaW5ncmVzcy12MiIsInB1YmxpY0FwcGxpY2F0aW9uSWQiOiJhcHBfZml4dHVyZSIsImp0aSI6Ijg4ODg4ODg4LTg4ODgtNDg4OC04ODg4LTg4ODg4ODg4ODg4OCIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwMzAwfQ.1EdercTG-1vM0nRoVneDcfoFbu0xId_oKZjMfYInCZna6GwuRlEW_a72O4baekU-yneOUPoA7w67lAvCiftTaw",
     "expiresAt": "2027-01-15T08:05:00.000Z"
   },
-  "capabilityDigest": "64ba6678224498fe74306e0f94cf41f60a90b1d218ff09264aa86f93901e017d",
+  "capabilityDigest": "a35e2871234d980498d80ff91d454ec513b603a48448e55eda189aa16f3301c7",
   "legacyRoutes": [
     {
       "id": "local-ingress",

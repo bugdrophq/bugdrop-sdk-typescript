@@ -1,9 +1,10 @@
 # V2 capability acceptance isolation — superseding P0 candidate
 
 The outer capability envelope remains schemaVersion1 for SDK transport compatibility.
-The TOKEN IS NOT V1. No token mode is inferred from outer envelope, HTTP route/header,
-unverified claim, or whether a ledger row happens to exist. This document supersedes
-any implication that an ordinary V1 signature plus an optional ledger check is enough.
+The TOKEN IS NOT V1. It is signed, not encrypted. Its minimal claims contain no
+internal scope; the opaque random handle is resolved only inside trusted online authority.
+No token mode is inferred from outer envelope, HTTP route/header, unverified claim,
+or whether a ledger row happens to exist.
 
 ## Authenticated discriminator and exact claims
 
@@ -13,23 +14,33 @@ keys; no key material or kid may be shared with V1 capability or confirmation ke
 V1 key rings must NEVER contain V2 keys, including aliases with another kid. Key
 publication must enforce this invariant before enabling V2 issuance.
 
-Payload exact keys in the token fixture: `protocolVersion,iss,aud,tenantId,
-applicationId,publicApplicationId,destinationId,credentialId,keyId,
-installationGeneration,configurationVersion,authorizationVersion,origin,
-attemptId,submissionId,payloadDigest,iat,exp,jti`.
+Payload exact keys: `protocolVersion,iss,aud,publicApplicationId,jti,iat,exp`.
 protocolVersion=2; iss=`bugdrop-managed-<realm>-v2`,
 aud=`bugdrop-managed-<realm>-ingress-v2`; realm is a trusted configured literal
-local, staging or production, with separate key rings. No wildcard/dynamic realm.
-Internal SQL tenant/application/destination/credential/generation IDs are UUIDs from
-the NEW authenticated original-scope publication; publicApplicationId is the intent's
-app_ string. keyId is the intent credential keyId, NOT credentialId. Current V1 uses
-keyId as credentialId and provider ID as installationId: those are not silently reused
-as these new internal fields. Published configuration/authorization versions are
-positive safe integers. No provider-ID remapping or unsigned tenant lookup is allowed.
-attemptId/submissionId/payloadDigest/origin match the original intent exactly.
-jti=attemptId; no extra independent recovery identity. iat=floor(genuine issuer signing
-clock/1000), exp=iat+300. Neither derives from future client issuedAt. Envelope expiry
-must equal exp as canonical UTC milliseconds. No version metadata enters token claims.
+local, staging or production, with separate key rings. No wildcard/dynamic realm. publicApplicationId is the already-public app_ identifier,
+matched to trusted key registration and configured application scope before routing.
+jti is a NEW cryptographically random UUIDv4 capability handle allocated once in the
+original reservation, unrelated to attempt/submission/tenant/application/destination/
+credential/generation IDs. Never derive it from scope, payload or a user identifier.
+It is linkable for the bounded capability lifetime, not a reporter pseudonym.
+A reservation handle collision fails closed without overwriting or selecting another
+handle; no replacement handle after timeout, lost response, restart or UNKNOWN.
+iat=floor(genuine issuer signing clock/1000), exp=iat+300; neither derives from client
+issuedAt. Envelope expiry equals exp as canonical UTC milliseconds. No internal operational
+UUID, attempt/submission ID, digest, origin, version metadata,
+configuration or authorization counter enters token claims.
+
+P5 stores the immutable handle→original intent/scope/binding mapping in the existing
+app-scoped authority reservation. Authenticate signature/type/realm/expiry first using
+trusted purpose-specific key registration; require signed publicApplicationId in that
+key/endpoint's configured application allowlist. Only then route by the signed public
+app identifier to its existing trusted app-scoped authority and lookup the signed handle.
+Unsigned request app/tenant/path does not select scope or override this binding. A handle
+from another application is unknown and rejected. Do not create a global handle→tenant
+directory. The trusted public-alias export is NEW: existing staging selects internal authority
+from configured STAGING_APPLICATION_ID. Its mapping to signed publicApplicationId must
+be authenticated, immutable and qualified for every enabled binding; unknown/unavailable mapping disables admission and verification. No publicly
+supplied internal scope, current provider mapping or error-driven discovery is allowed.
 
 Issuer clock must still satisfy request admission limits before signing/commit/release.
 Verifier requires iat*1000<=current issuer clock<exp*1000, exp-iat=300, active key
@@ -38,12 +49,15 @@ The raw JWS token must fit the existing managed8192-byte bound (stricter than th
 SDK envelope's generic16384-byte limit). Reject unknown fields, mode, key purpose,
 issuer/audience, algorithms, duplicate keys, malformed bytes and unsupported realm.
 
-Verify signature and exact mode/scope against trusted authority BEFORE selecting a
-ledger record using signed tenant/internal application/credential/generation/attempt.
+Verify signature and exact mode against trusted deployment authority BEFORE selecting
+a ledger record by signed random jti. Scope, attempt and submission binding are read
+from that original immutable record, never from client claims or current provider mapping.
 Require state admitted, immutable original intent scope/binding, current authority,
 unexpired token and matching capabilityDigest of the exact token+envelope expiry.
 Check submitted raw bytes/digest/origin before any external attempt. Missing, purged,
-UNKNOWN, reserved, failed, mismatched or unavailable ledger fails closed. No V1 fallback.
+UNKNOWN, reserved, failed, mismatched or unavailable ledger fails closed. No V1 fallback. Recheck after async ledger/digest work and immediately before every
+external attempt, including receipt/adapter final preflight. A replaced/disappeared
+public-alias mapping fails closed rather than resolving current provider scope.
 ADMITTED history alone never overrides current revocation or expiry.
 
 ## Every reachable gate and rollout

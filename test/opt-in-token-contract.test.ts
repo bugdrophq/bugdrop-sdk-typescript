@@ -3,6 +3,7 @@ import { createPublicKey, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import tokenFixture from '../packages/contracts/fixtures/opt-in-token.v2.json';
 import confirmationFixture from '../packages/contracts/fixtures/opt-in.v2.json';
+import outcomeFixture from '../packages/contracts/fixtures/opt-in-outcome.v2.json';
 import { digest } from './helpers/opt-in-contract';
 
 const key = createPublicKey({ key: tokenFixture.publicKey, format: 'jwk' });
@@ -51,6 +52,40 @@ function gate(policy: string, state: string, commitment: string, active: boolean
 }
 
 describe('P0 authenticated token isolation and route expectations', () => {
+  it('contains no private scope in decoded token, confirmation or browser envelope', () => {
+    const [header, payload] = tokenFixture.envelope.token.split('.');
+    if (!header || !payload) throw new Error('missing fixture segments');
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    expect(Object.keys(decoded)).toEqual([
+      'protocolVersion',
+      'iss',
+      'aud',
+      'publicApplicationId',
+      'jti',
+      'iat',
+      'exp',
+    ]);
+    const publicData = JSON.stringify([
+      JSON.parse(Buffer.from(header, 'base64url').toString()),
+      decoded,
+      confirmationFixture.response.confirmation,
+      confirmationFixture.response.capability,
+    ]);
+    const i = confirmationFixture.request.intent;
+    for (const value of [
+      outcomeFixture.activityRow.tenant_id,
+      outcomeFixture.activityRow.application_id,
+      outcomeFixture.activityRow.destination_id,
+      i.credentialId,
+      i.installationGeneration,
+      i.attemptId,
+      i.keyId,
+      i.submissionId,
+    ]) {
+      expect(publicData).not.toContain(value);
+    }
+    expect(decoded.jti).not.toBe(i.attemptId);
+  });
   it('pins a real signed V2 candidate with a separate synthetic key and exact commitment', () => {
     expect(authenticatedV2(tokenFixture.envelope.token).claims.protocolVersion).toBe(2);
     expect(tokenFixture.publicKey).not.toEqual(confirmationFixture.confirmationPublicKey);
@@ -59,7 +94,7 @@ describe('P0 authenticated token isolation and route expectations', () => {
       tokenFixture.capabilityDigest
     );
     expect(Date.parse(e.expiresAt)).toBe(tokenFixture.claims.exp * 1000);
-    expect(tokenFixture.claims.jti).toBe(tokenFixture.claims.attemptId);
+    expect(tokenFixture.claims.jti).not.toBe(confirmationFixture.request.intent.attemptId);
   });
 
   for (const route of tokenFixture.legacyRoutes) {

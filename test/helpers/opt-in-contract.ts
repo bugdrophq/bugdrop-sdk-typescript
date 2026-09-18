@@ -123,6 +123,8 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
     'kid',
     'intentDigest',
     'capabilityDigest',
+    'reservedAt',
+    'retentionDeadline',
     'admittedAt',
     'expiresAt',
     'signature',
@@ -135,6 +137,10 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
       digest('bugdrop:capability-envelope:v2', [1, capability.token, capability.expiresAt])
   );
   requireValue(Number.isSafeInteger(c.admittedAt) && Number.isSafeInteger(c.expiresAt));
+  requireValue(Number.isSafeInteger(c.reservedAt) && Number.isSafeInteger(c.retentionDeadline));
+  requireValue(Number(c.reservedAt) >= Math.max(0, expected.issuedAt - 5000));
+  requireValue(Number(c.reservedAt) <= Number(c.admittedAt));
+  requireValue(c.retentionDeadline === Number(c.reservedAt) + 720 * 3600_000);
   requireValue(
     Number(c.admittedAt) >= expected.issuedAt - 5000 && Number(c.admittedAt) < expected.expiresAt
   );
@@ -146,7 +152,16 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
   requireValue(typeof c.signature === 'string');
   const sig = Buffer.from(c.signature, 'base64url');
   requireValue(sig.length === 64 && sig.toString('base64url') === c.signature);
-  const tuple = [2, c.kid, c.intentDigest, c.capabilityDigest, c.admittedAt, c.expiresAt];
+  const tuple = [
+    2,
+    c.kid,
+    c.intentDigest,
+    c.capabilityDigest,
+    c.reservedAt,
+    c.retentionDeadline,
+    c.admittedAt,
+    c.expiresAt,
+  ];
   requireValue(
     verify(
       'sha256',
@@ -161,11 +176,13 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
 }
 
 // Public scalar d=1 is an intentionally non-secret test key, never a service key.
-export function signedResponse(expected: Intent, admittedAt: number) {
+export function signedResponse(expected: Intent, admittedAt: number, reservedAt = admittedAt) {
   const response = structuredClone(fixture.response);
   const c = response.confirmation;
   c.intentDigest = intentDigest(expected);
   c.admittedAt = admittedAt;
+  c.reservedAt = reservedAt;
+  c.retentionDeadline = reservedAt + 720 * 3600_000;
   c.expiresAt = expected.expiresAt;
   const scalar = Buffer.alloc(32);
   scalar[31] = 1;
@@ -173,7 +190,16 @@ export function signedResponse(expected: Intent, admittedAt: number) {
     key: { ...fixture.confirmationPublicKey, d: scalar.toString('base64url') },
     format: 'jwk',
   });
-  const tuple = [2, c.kid, c.intentDigest, c.capabilityDigest, c.admittedAt, c.expiresAt];
+  const tuple = [
+    2,
+    c.kid,
+    c.intentDigest,
+    c.capabilityDigest,
+    c.reservedAt,
+    c.retentionDeadline,
+    c.admittedAt,
+    c.expiresAt,
+  ];
   c.signature = sign(
     'sha256',
     Buffer.from(`bugdrop:metadata-confirmation:v2\0${JSON.stringify(tuple)}`),

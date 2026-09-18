@@ -9,6 +9,26 @@ import {
 
 const issuerNow = fixture.request.intent.issuedAt;
 describe('P0 genuine issuer clock with signed skew boundaries', () => {
+  it.each([-5000, 5000])('uses only signed issuer retention at client skew %s', (skew) => {
+    const request = structuredClone(fixture.request);
+    request.intent.issuedAt = issuerNow + skew;
+    request.intent.expiresAt = request.intent.issuedAt + 60_000;
+    const reservedAt = issuerNow + 1000;
+    const admittedAt = issuerNow + 3000;
+    const response = signedResponse(request.intent, admittedAt, reservedAt);
+    expect(() => validateResponse(response, request.intent, admittedAt)).not.toThrow();
+    expect(response.confirmation.retentionDeadline).toBe(reservedAt + 720 * 3600_000);
+    expect(response.confirmation.retentionDeadline).not.toBe(
+      request.intent.issuedAt + 720 * 3600_000
+    );
+    expect(
+      signedResponse(request.intent, admittedAt + 1000, reservedAt).confirmation.retentionDeadline
+    ).toBe(response.confirmation.retentionDeadline);
+  });
+  it('rejects issuer clock regression before the original reservation', () => {
+    const response = signedResponse(fixture.request.intent, issuerNow, issuerNow + 1000);
+    expect(() => validateResponse(response, fixture.request.intent, issuerNow)).toThrow();
+  });
   it.each([-5000, 5000])('accepts client issuedAt skew %s without changing issuer time', (skew) => {
     const request = structuredClone(fixture.request);
     request.intent.issuedAt = issuerNow + skew;

@@ -48,7 +48,12 @@ input, request headers, a self-advertised remote key or current provider-ID look
 Export ownership: account/data supplies scoped IDs/catalog; runtime supplies exact
 endpoint/deployment and public key; coordinator verifies matching release evidence.
 No discovery endpoint or new trusted key from an error response is allowed.
-Do not expose internal scope to browser: only binding and browser package claim leave it.
+Browser request metadata contains only binding and browser package claim, with no
+caller-selected internal scope. The returned signed token is openly decodable but
+carries only a random capability handle and required verification/time fields. Original
+operational scope remains in trusted server configuration and the issuer ledger;
+confirmation commits it by digest without returning raw scope to browser. The reference
+backend returns only the verified capability envelope, not confirmation or intent.
 Configuration rotation requires an explicit server update; stale scope fails closed.
 
 ## Exact request and canonical intent
@@ -105,17 +110,20 @@ this V2 media type. Existing V1 parser rejects outer schema2; it otherwise ignor
 unknown V1 response fields, so added confirmation on a V1 object is NOT verification.
 
 confirmation exact keys `schemaVersion:2,kid,intentDigest,capabilityDigest,
-admittedAt,expiresAt,signature`. kid=`^[A-Za-z0-9_-]{1,64}$`, pinned key only.
+reservedAt,retentionDeadline,admittedAt,expiresAt,signature`. kid=`^[A-Za-z0-9_-]{1,64}$`, pinned key only.
 capabilityDigest=SHA256(UTF8("bugdrop:capability-envelope:v2\0") ||
 UTF8(JSON.stringify([1, token, capability.expiresAt]))), lowercasehex.
-Confirmation expiresAt=intent.expiresAt; admittedAt is the genuine issuer commit clock,
+reservedAt is the original genuine issuer reservation clock; retentionDeadline=reservedAt+720h.
+Require issuedAt-5,000<=reservedAt<=admittedAt<expiresAt. Neither value derives from
+client retention calculations. Confirmation expiresAt=intent.expiresAt; admittedAt is the genuine issuer authorization-decision clock sampled before its
+commit, not an exact physical COMMIT timestamp,
 with intent.issuedAt-5,000<=admittedAt<intent.expiresAt and admittedAt<=clientNow+5,000.
 This same lower bound applies to issuer admission and client verification; do not clamp
 admittedAt to the client clock. No expiry grace, waiting, retry or deadline renewal.
 Client now<confirmation.expiresAt and capability remaining lifetime follows V1 limits.
 Signature is ES256: ECDSA P-256/SHA256, raw IEEE-P1363 r||s64bytes, canonical base64url;
 verify UTF8("bugdrop:metadata-confirmation:v2\0") concatenated with canonical JSON array
-`[2,kid,intentDigest,capabilityDigest,admittedAt,expiresAt]`. No algorithm negotiation.
+`[2,kid,intentDigest,capabilityDigest,reservedAt,retentionDeadline,admittedAt,expiresAt]`. No algorithm negotiation.
 A separate reviewed confirmation signing-key purpose is required; do not silently
 reuse existing capability keys. Fixtures are synthetic data, not usable credentials.
 
@@ -141,5 +149,6 @@ or catalog_mismatch;410 attempt_expired;503 temporarily_unavailable. Gateway mal
 route/transport may still yield its existing404/502; all are failures, never issuer proof.
 SDK fixed categories: rejected_before_send (local); exchange_unconfirmed (ANY sent
 request lacking verified confirmation); confirmed. HTTP errors/signatures alone are
-not zero-mint evidence. Persist private pending attempt context before send for bounded
-accounting; never return an unverified capability, log it or retry via V1.
+not zero-mint evidence. Keep pending client context only in memory through the8s exchange+5s grace;
+no durable unconfirmed client intent store is selected. Any confirmed private server
+context uses verified issuer retentionDeadline, never a client-derived retention deadline; never return an unverified capability, log it or retry via V1.
