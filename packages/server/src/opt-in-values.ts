@@ -65,7 +65,7 @@ export function https(value: unknown, endpoint: boolean): string {
   requireValue(!url.hostname.endsWith('.'));
   requireValue(
     endpoint
-      ? url.href === result && url.pathname === '/v2/submission-capabilities'
+      ? url.href === result && result === `${url.origin}/v2/submission-capabilities`
       : url.origin === result
   );
   return result;

@@ -1,4 +1,4 @@
-import { createHmac, createPublicKey, type KeyObject } from 'node:crypto';
+import { createHmac, createPublicKey, createSecretKey, type KeyObject } from 'node:crypto';
 import {
   base64,
   hash,
@@ -98,12 +98,14 @@ export function configuration(input: BugDropOptInOptions) {
     'confirmationKeys',
   ];
   const o = record(input, Object.hasOwn(input ?? {}, 'fetch') ? [...names, 'fetch'] : names);
-  const [prefix, keyId, root, extra] = text(o.apiKey).split('.');
-  requireValue(prefix === 'bd_api_v2' && extra === undefined && keyId === o.keyId);
+  const keyId = text(o.keyId);
   base64(keyId, 16);
-  const secret = createHmac('sha256', base64(root, 32))
-    .update(`bugdrop:auth:v2\0${keyId}`)
-    .digest();
+  const [prefix, credentialKeyId, root, extra] = text(o.apiKey).split('.');
+  requireValue(prefix === 'bd_api_v2' && extra === undefined && credentialKeyId === keyId);
+  // V2 derives a key from a provisioned random 32-byte root, not a human password.
+  // The independently validated public key ID is context; the root is the HMAC key.
+  const rootKey = createSecretKey(base64(root, 32));
+  const secret = createHmac('sha256', rootKey).update(`bugdrop:auth:v2\0${keyId}`).digest();
   const applicationId = text(o.applicationId);
   requireValue(/^app_[A-Za-z0-9_-]{1,196}$/.test(applicationId));
   const catalogDigest = hex(o.catalogDigest);
