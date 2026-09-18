@@ -1,4 +1,4 @@
-# Original authority and open qualification gates — P0 candidate
+# Original authority and open qualification gates — P0 frozen
 
 This companion records the required authority source without pretending it exists in
 the current runtime. Read runtime design `/tmp/bugdrop-runtime-original-authority-design-v1.md`,
@@ -96,7 +96,7 @@ be treated as A=0, and UNKNOWN is never silently converted to S=0.
 The chosen app-scoped storage still requires bounded capacity/expiry handling and
 qualification of async interleaving with revocation. Storage exhaustion must fail before
 reservation, not evict live evidence or fall back to stateless signing. Implementation
-stays closed pending cross-owner acceptance of availability/custody policy and qualification of A accounting,
-trusted scope publication, credential provisioning and exact P6/P7 outcome transport.
-This candidate may be reviewed in parts but must not be called a frozen P0 contract
-while those prerequisites remain open.
+stays closed pending qualification of A accounting, trusted scope publication,
+credential provisioning and exact P6/P7 outcome transport. P0 is frozen after explicit
+user acceptance of custody, finite replay and fail-closed availability policy; this
+does not close those implementation/qualification prerequisites or authorize runtime work.

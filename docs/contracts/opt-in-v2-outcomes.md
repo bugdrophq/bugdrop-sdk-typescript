@@ -1,4 +1,4 @@
-# P6/P7/P8 delivery projection — review candidate
+# P6/P7/P8 delivery projection — frozen P0 contract, open implementation gates
 
 Source pin: web `0c5ce62f85a88c61fa9605d54f7689f435194c04`, effective
 `20260916233500_require_credential_activation.sql:3–4` and

@@ -1,4 +1,4 @@
-# V2 capability acceptance isolation — superseding P0 candidate
+# V2 capability acceptance isolation — P0 frozen
 
 The outer capability envelope remains schemaVersion1 for SDK transport compatibility.
 The TOKEN IS NOT V1. It is signed, not encrypted. Its minimal claims contain no

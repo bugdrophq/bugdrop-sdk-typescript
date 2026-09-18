@@ -1,10 +1,15 @@
-# P0 custody and replay limits — separate policy decision pending
+# P0 custody and replay limits — approved policy, frozen contract
 
-Uninstall retention Option A does NOT approve the following P0 storage. These are
-exact proposed limits requiring joint data/privacy/runtime acceptance before any
-implementation, credentials or rollout. No new aggregate or indefinite fence is implied.
+The user explicitly approved this P0 policy bundle separately from uninstall Option A:
+private authorization state ends at original issuer reservedAt+720h, excluded from
+analytics/logs/browser storage, with separately disclosed backup lag; service-enforced
+same-submission replay prevention is finite to that window, not indefinite after purge;
+ambiguity or storage unavailability fails closed with no retry, replacement token,
+fallback, live-evidence eviction or remint. No new aggregate or indefinite fence is implied.
+P0 is frozen subject to the existing implementation and qualification gates. This policy
+acceptance does not authorize implementation, credentials, rollout or provider operations.
 
-| Record                                                                                                                     | Proposed custody and clock                                                                                                                             | Access and exclusion                                                                                     |
+| Record                                                                                                                     | Approved custody and clock                                                                                                                             | Access and exclusion                                                                                     |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | Random handle/public-alias→original scope mapping, intent, state, signing uncertainty, confirmation, capability commitment | Private P5 authority only; retentionDeadline=original reservedAt+720h; immutable across retries/recovery                                               | Scoped private authority API only; absent from P6/P7 SQL, logs, traces, analytics and browser storage    |
 | Client pending intent and status                                                                                           | Unconfirmed: memory only for exchange8s+grace5s. Confirmed optional server store: signed issuer retentionDeadline=original reservedAt+720h, no refresh | No key/root/authSecret/token; no browser persistence or general analytics                                |
@@ -30,7 +35,7 @@ it to an intent. It is NEW custody, not anonymous telemetry or harmless public m
 No raw/encrypted capability token, API key, root or authSecret is persisted by this
 proposal. Expiration must block all reads/joins even if physical purge is late; purge
 health, backup retention, restore reconciliation, private API ACLs and deletion handling
-need an exact runtime policy before approval. Bounded counts do not authorize retaining
+still require exact implementation contracts and qualification before enablement. Bounded counts do not authorize retaining
 identifiers or replacing purged evidence with long-lived aggregates.
 
 P0 purge cannot erase the only metadata copy for already accepted delivery work. The
@@ -46,12 +51,12 @@ may make its token unusable without decrementing historical A or erasing known S
 Unknown signer state is neither a delivery indeterminate state nor a NULL version.
 Missing reads, purged rows and delivery counters cannot prove S=0 or A=0.
 
-The proposed server-side same-submission uniqueness guarantee lasts only until original
+The approved server-side same-submission uniqueness guarantee lasts only until original
 reservedAt+720h. After purge, expired ORIGINAL intent is still rejected by its signed
 deadline, but a fresh attempt using the same submission ID is not indefinitely fenced.
-SDK prohibition on doing that is not a service-enforced indefinite guarantee. This finite
-limit needs explicit joint acceptance; if indefinite non-reopening is required, this
-candidate is blocked rather than inventing permanent identifier retention. No purge,
+SDK prohibition on doing that is not a service-enforced indefinite guarantee. The user explicitly accepted this finite
+limit. A future requirement for indefinite non-reopening would require a separately
+reviewed contract; it does not authorize permanent identifier retention here. No purge,
 rollback, restore or recovery may reopen the original unexpired attempt.
 
 Legacy P7 wrapper yields four NULL values; never infer protocol1 from them. A historical

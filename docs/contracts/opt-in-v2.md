@@ -1,9 +1,12 @@
-# Versioned metadata admission contract — P0 review candidate
+# Versioned metadata admission contract — P0 frozen
 
-Status: D1–D4 approved as decisions; this exact P0 protocol is a REVIEW CANDIDATE.
+Status: P0 FROZEN after cross-owner review and explicit user acceptance of metric A
+and the final custody, finite-replay and fail-closed policy bundle. This freezes the
+contract; the listed implementation interfaces and qualification gates remain open.
+It does not authorize runtime work, a PR, deployment, publication or credential issuance.
 No runtime, gateway, database migration, credential issuance or deployment is implemented here.
 SDK base: d75fc31ef626493b2927793f48983035bdbfbaed. Existing V1 remains unchanged.
-Candidate fixtures: `packages/contracts/fixtures/opt-in.v2.json`, `opt-in-catalog.v2.json`,
+Frozen contract fixtures: `packages/contracts/fixtures/opt-in.v2.json`, `opt-in-catalog.v2.json`,
 `opt-in-token.v2.json`, `opt-in-outcome.v2.json`.
 Canonical encoding and state rules below override older proposed metadata-header designs.
 

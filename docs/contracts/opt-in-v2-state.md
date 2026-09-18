@@ -1,6 +1,7 @@
-# V2 admission, catalogs and package ownership — P0 candidate
+# V2 admission, catalogs and package ownership — P0 frozen
 
-Companion to opt-in-v2.md. Approved decisions do not approve this exact implementation.
+Companion to opt-in-v2.md. Contract and final policy bundle are frozen; implementation
+and qualification gates remain open, with no runtime-start authorization.
 
 ## D3 catalog agreement
 
@@ -22,8 +23,8 @@ not full both-SDK publication evidence. Full qualification requires both expecte
 
 Store accepted snapshot/normalization identity with immutable admission. Keep old
 snapshot verification and public confirmation keys through the maximum original
-reservation retentionDeadline referencing them plus5min clock margin (proposed policy
-in opt-in-v2-custody.md, not approved by uninstall Option A). New admission accepts ONLY active snapshot. Internal historical verification reads
+reservation retentionDeadline referencing them plus5min clock margin (P0 policy
+in opt-in-v2-custody.md, accepted separately from uninstall Option A). New admission accepts ONLY active snapshot. Internal historical verification reads
 the original snapshot without renormalizing; duplicate requests never return a capability. Max128 retained
 snapshots and128 keys; if rotation would evict live history, block rotation, never evict
 live work or extend TTL. Historical catalogs never authorize new unsupported claims.
@@ -34,7 +35,7 @@ Compromise/revocation overrides availability: fail confirmation, do not remint/r
 
 Runtime inventory /tmp/bugdrop-p4-p5-p6-runtime-inventory-v1.md SHA256
 `d22d51abafd3fbad6d0dcf1b64e76c5c6ff561d5723d2b087e915a3f3ff493fa`
-was read for this candidate. Current local/capability.ts signs statelessly; the later
+was read for this contract. Current local/capability.ts signs statelessly; the later
 local/receipt.ts ledger governs delivery, not minting. Observer finish can fail AFTER
 signing. No implemented outcome adapter exists. NONE is assumed to supply this ledger.
 
@@ -166,7 +167,7 @@ P8 DTO preserves separate fields/unknown/reporting labels. No automatic enrollme
 backfill, version fingerprints or longer-lived aggregates. Option A uninstall retention
 approved in principle but exact F2 implementation is separate; no uninstall changes here.
 
-## Required cross-owner signoff before implementation
+## Remaining implementation and qualification gates
 
 SDK, runtime/gateway, data/credential, coordinator/security and P3 owners must review
 exact commit/fixtures plus downgrade attempt toV1, credential prefix relabeling, all
@@ -175,9 +176,11 @@ faults. Current fixture tests prove canonical vectors and parser constraints ONL
 not issuer mode storage, signatures in deployed services, atomicity or zero-mint oracles.
 The materialized-object helper does not qualify raw JSON duplicate keys, hidden header
 multiplicity, platform budgets or production constant-time verification.
-No P1–P8 runtime coding/PR until this P0 candidate and prerequisite ownership are resolved.
-P0 retention, capability-commitment custody and finite replay limits need the separate
-explicit acceptance in opt-in-v2-custody.md; uninstall Option A does not authorize them.
+P0 cross-owner review and explicit user policy acceptance are complete. Runtime coding
+and PR work remain on hold pending the listed interface/ownership gates and explicit
+implementation authorization. Retention, capability-commitment custody, finite replay
+and fail-closed availability policy are accepted in opt-in-v2-custody.md separately from
+uninstall Option A; acceptance does not establish implemented or qualified behavior.
 
 ## Exact P6 paths and serialization
 
