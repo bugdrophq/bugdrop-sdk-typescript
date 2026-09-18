@@ -187,3 +187,17 @@ same-lease replay rejection. `test/staging/drain.test.mjs` protects invocation i
 cleanup and expiry. The admission-only remote counter still requires SDK transcript reconciliation;
 neither these fixtures nor that counter alone establish complete live staging evidence. Public V1
 contracts and the packed safety handshake remain unchanged.
+
+## P0 opt-in proposal (not implemented or frozen)
+
+The [V2 wire candidate](contracts/opt-in-v2.md), [state and ownership candidate](contracts/opt-in-v2-state.md),
+[original authority gates](contracts/opt-in-v2-authority.md) and
+[delivery projection candidate](contracts/opt-in-v2-outcomes.md) record cross-repository
+assumptions against runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
+`0c5ce62f85a88c61fa9605d54f7689f435194c04`. Synthetic `opt-in*.v2.json` fixtures and
+`test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order;
+they do not qualify deployed authentication, original-generation publication, atomic
+signing, queue/SQL delivery or account UI. Exact signing-accounting semantics and those
+new authority/transport prerequisites remain review gates. Existing exports and V1
+contracts are unchanged; no runtime implementation or publication is authorized by
+this proposal.
