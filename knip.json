@@ -13,7 +13,7 @@
       "ignoreDependencies": ["@bugdrop/server"]
     },
     "packages/browser": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "src/opt-in.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/contracts": {
