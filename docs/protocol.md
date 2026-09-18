@@ -192,7 +192,9 @@ contracts and the packed safety handshake remain unchanged.
 
 The [V2 wire candidate](contracts/opt-in-v2.md), [state and ownership candidate](contracts/opt-in-v2-state.md),
 [original authority gates](contracts/opt-in-v2-authority.md) and
-[delivery projection candidate](contracts/opt-in-v2-outcomes.md) record cross-repository
+[delivery projection candidate](contracts/opt-in-v2-outcomes.md),
+[token isolation](contracts/opt-in-v2-token.md) and
+[pending custody policy](contracts/opt-in-v2-custody.md) record cross-repository
 assumptions against runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
 `0c5ce62f85a88c61fa9605d54f7689f435194c04`. Synthetic `opt-in*.v2.json` fixtures and
 `test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order;

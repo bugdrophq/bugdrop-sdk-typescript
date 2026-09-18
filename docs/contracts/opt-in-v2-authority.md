@@ -39,8 +39,8 @@ from current mappings, provider IDs, configurationVersion or delivery receipts.
 P0 client attemptId and issuer reservation time are distinct. Store one issuer clock
 sample reservedAt in the first durable reservation, with retentionDeadline=reservedAt
 +720 hours. Neither restart, duplicate, failed confirmation nor continuation changes it.
-Store admittedAt once at the successful second transition; it must satisfy the original
-intent lifetime. Confirmation and normalized versions refer to this same attempt.
+Store admittedAt once at the successful second transition; it must satisfy
+issuedAt-5,000<=admittedAt<original expiresAt, using genuine issuer time. Confirmation and normalized versions refer to this same attempt.
 No separate recovery attempt or new submission may replace the original attempt to
 repair an ambiguous exchange. Client pending context contains only the original binding,
 intent and status, never credential material or token; expires no later than the original

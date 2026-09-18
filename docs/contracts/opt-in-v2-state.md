@@ -21,8 +21,9 @@ rotation. Signed confirmation of a null result confirms admitted absence of know
 not full both-SDK publication evidence. Full qualification requires both expected claims.
 
 Store accepted snapshot/normalization identity with immutable admission. Keep old
-snapshot verification and confirmation keys through original admitted-work retention
-(30 days) plus5min clock margin. New admission accepts ONLY active snapshot. Internal historical verification reads
+snapshot verification and public confirmation keys through the maximum original
+reservation retentionDeadline referencing them plus5min clock margin (proposed policy
+in opt-in-v2-custody.md, not approved by uninstall Option A). New admission accepts ONLY active snapshot. Internal historical verification reads
 the original snapshot without renormalizing; duplicate requests never return a capability. Max128 retained
 snapshots and128 keys; if rotation would evict live history, block rotation, never evict
 live work or extend TTL. Historical catalogs never authorize new unsupported claims.
@@ -71,7 +72,7 @@ returns409 binding_conflict. Client may not remint a nonce or submission to repa
 This sacrifices retry availability, deliberately avoiding durable bearer storage.
 
 Counters distinguish R=reserved permits, S=known completed signatures, U=possible
-signatures where crash left reserved/signing, A=durably admitted/releasable capabilities,
+signatures where crash left reserved/signing, A=historical durably authorized results (not current usability),
 C=client verified confirmations, D=delivery. S may be UNKNOWN after crash between signing
 and second commit: retain U<=1 per spent permit, not a fabricated0 or exact signed count.
 Invalid intent MUST yield R=S=A=0 before signing. After admission A=1 even when C=0.
@@ -88,7 +89,9 @@ signing evidence. Existing issuer freshness and revocation guarantees still appl
 Cryptographic work is not transactionally atomic with storage; the spent-permit rule
 makes this a bounded recoverable state machine rather than a false distributed transaction.
 
-Capability verification/submission ingress must consult this NEW ledger: require state
+Every reachable capability verifier must implement authenticated V2 isolation and
+rollout in opt-in-v2-token.md or reject V2 entirely, including direct receipt/adapter
+and hosted fallback paths. Capability verification must consult this NEW ledger: require state
 admitted, exact original scope/submission/digest and matching capability commitment before
 calling delivery. Existing token signature verification alone is insufficient. This
 prevents precommit candidates from becoming usable after a failure or memory exposure.
@@ -169,6 +172,8 @@ not issuer mode storage, signatures in deployed services, atomicity or zero-mint
 The materialized-object helper does not qualify raw JSON duplicate keys, hidden header
 multiplicity, platform budgets or production constant-time verification.
 No P1–P8 runtime coding/PR until this P0 candidate and prerequisite ownership are resolved.
+P0 retention, capability-commitment custody and finite replay limits need the separate
+explicit acceptance in opt-in-v2-custody.md; uninstall Option A does not authorize them.
 
 ## Exact P6 paths and serialization
 

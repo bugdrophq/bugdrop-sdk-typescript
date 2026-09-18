@@ -1,5 +1,12 @@
 // Test-only executable contract oracle. Never imported by a public package.
-import { createHash, createHmac, createPublicKey, verify } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  createPrivateKey,
+  createPublicKey,
+  sign,
+  verify,
+} from 'node:crypto';
 import fixture from '../../packages/contracts/fixtures/opt-in.v2.json';
 import catalogFixture from '../../packages/contracts/fixtures/opt-in-catalog.v2.json';
 import {
@@ -129,7 +136,7 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
   );
   requireValue(Number.isSafeInteger(c.admittedAt) && Number.isSafeInteger(c.expiresAt));
   requireValue(
-    Number(c.admittedAt) >= expected.issuedAt && Number(c.admittedAt) < expected.expiresAt
+    Number(c.admittedAt) >= expected.issuedAt - 5000 && Number(c.admittedAt) < expected.expiresAt
   );
   requireValue(
     Number(c.admittedAt) <= now + 5000 &&
@@ -151,4 +158,29 @@ export function validateResponse(response: unknown, expected: Intent, now: numbe
       sig
     )
   );
+}
+
+// Public scalar d=1 is an intentionally non-secret test key, never a service key.
+export function signedResponse(expected: Intent, admittedAt: number) {
+  const response = structuredClone(fixture.response);
+  const c = response.confirmation;
+  c.intentDigest = intentDigest(expected);
+  c.admittedAt = admittedAt;
+  c.expiresAt = expected.expiresAt;
+  const scalar = Buffer.alloc(32);
+  scalar[31] = 1;
+  const key = createPrivateKey({
+    key: { ...fixture.confirmationPublicKey, d: scalar.toString('base64url') },
+    format: 'jwk',
+  });
+  const tuple = [2, c.kid, c.intentDigest, c.capabilityDigest, c.admittedAt, c.expiresAt];
+  c.signature = sign(
+    'sha256',
+    Buffer.from(`bugdrop:metadata-confirmation:v2\0${JSON.stringify(tuple)}`),
+    {
+      key,
+      dsaEncoding: 'ieee-p1363',
+    }
+  ).toString('base64url');
+  return response;
 }

@@ -3,7 +3,8 @@
 Status: D1–D4 approved as decisions; this exact P0 protocol is a REVIEW CANDIDATE.
 No runtime, gateway, database migration, credential issuance or deployment is implemented here.
 SDK base: d75fc31ef626493b2927793f48983035bdbfbaed. Existing V1 remains unchanged.
-Normative fixtures: `packages/contracts/fixtures/opt-in.v2.json`, `opt-in-catalog.v2.json`.
+Candidate fixtures: `packages/contracts/fixtures/opt-in.v2.json`, `opt-in-catalog.v2.json`,
+`opt-in-token.v2.json`, `opt-in-outcome.v2.json`.
 Canonical encoding and state rules below override older proposed metadata-header designs.
 
 ## Selection and downgrade boundary
@@ -64,7 +65,10 @@ Endpoint exact configured canonical HTTPS URL ending `/v2/submission-capabilitie
 origin exact configured HTTPS application origin, with V1 canonical alias rejection.
 No production loopback exception. Digests are lowercase64hex. Times are safe integer
 Unix milliseconds, nonnegative; issuedAt<=now+5,000 and expiresAt=issuedAt+60,000;
-now<expiresAt. Recheck current clock after every blocking lock and before admission.
+now<expiresAt. Thus issuer admission clock T must satisfy issuedAt-5,000<=T<expiresAt;
+the deadline remains client issuedAt+60,000, never issuer admission+60,000. This permits
+ahead-clock requests without waiting or fabricating issuer time (at most65s until the
+original deadline). Recheck current clock after every blocking lock and before admission.
 Version claims: canonical stable `MAJOR.MINOR.PATCH`, each component0..999999,
 no leading zeros except0, <=64 ASCII bytes. Header server version must equal body.
 normalizedVersions keys exactly `sdkVersion,browserSdkVersion,widgetVersion,protocolVersion`;
@@ -92,7 +96,9 @@ see the bearer. A malicious bearer holder can forge claims, as with other app au
 ## Response and confirmation verification
 
 200 body keys exactly `schemaVersion:2, capability, confirmation`.
-capability is exact V1 `{schemaVersion:1,token,expiresAt}`; token remains opaque.
+capability uses the V1 transport shape `{schemaVersion:1,token,expiresAt}`; token remains
+opaque to the SDK but MUST be the distinct V2 authenticated token defined in
+opt-in-v2-token.md. This is not a V1 token or permission for V1 verifier acceptance.
 Outer response media type is the V2 Accept value; Cache-Control exactly no-store.
 No cookies, redirects or arbitrary response headers; gateway must explicitly permit
 this V2 media type. Existing V1 parser rejects outer schema2; it otherwise ignores
@@ -102,7 +108,10 @@ confirmation exact keys `schemaVersion:2,kid,intentDigest,capabilityDigest,
 admittedAt,expiresAt,signature`. kid=`^[A-Za-z0-9_-]{1,64}$`, pinned key only.
 capabilityDigest=SHA256(UTF8("bugdrop:capability-envelope:v2\0") ||
 UTF8(JSON.stringify([1, token, capability.expiresAt]))), lowercasehex.
-Confirmation expiresAt=intent.expiresAt; admittedAt within intent lifetime and <=now+5s.
+Confirmation expiresAt=intent.expiresAt; admittedAt is the genuine issuer commit clock,
+with intent.issuedAt-5,000<=admittedAt<intent.expiresAt and admittedAt<=clientNow+5,000.
+This same lower bound applies to issuer admission and client verification; do not clamp
+admittedAt to the client clock. No expiry grace, waiting, retry or deadline renewal.
 Client now<confirmation.expiresAt and capability remaining lifetime follows V1 limits.
 Signature is ES256: ECDSA P-256/SHA256, raw IEEE-P1363 r||s64bytes, canonical base64url;
 verify UTF8("bugdrop:metadata-confirmation:v2\0") concatenated with canonical JSON array
