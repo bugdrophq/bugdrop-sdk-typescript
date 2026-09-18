@@ -19,6 +19,8 @@ const forbidden = [
   'VITE_BUGDROP_API_KEY',
   'bd_api_v1',
   'bd_auth_v1',
+  'bd_api_v2',
+  'bd_auth_v2',
   'apiKey',
   'data-repo',
   'categoryLabels',
@@ -45,46 +47,47 @@ if (dependencyText.includes('@bugdrop/server')) {
   throw new Error('Browser security boundary failed: @bugdrop/browser depends on @bugdrop/server');
 }
 
-const browserConsumer = await build({
-  stdin: {
-    contents: "import { BugDrop } from '@bugdrop/browser'; void BugDrop;",
-    resolveDir: repositoryRoot,
-    sourcefile: 'browser-consumer.ts',
-  },
-  bundle: true,
-  define: {
-    'process.env.NEXT_PUBLIC_BUGDROP_API_KEY': JSON.stringify('browser-build-api-key-sentinel'),
-  },
-  format: 'esm',
-  platform: 'browser',
-  write: false,
-});
-const browserConsumerText = browserConsumer.outputFiles[0]?.text ?? '';
-if (browserConsumerText.includes('browser-build-api-key-sentinel')) {
-  throw new Error('Browser security boundary failed: public environment secret entered the bundle');
+for (const subpath of Object.keys(packageJson.exports)) {
+  const specifier = '@bugdrop/browser' + (subpath === '.' ? '' : subpath.slice(1));
+  const browserConsumer = await build({
+    stdin: {
+      contents: `import * as SDK from '${specifier}'; window.SDK = SDK;`,
+      resolveDir: repositoryRoot,
+      sourcefile: 'browser-consumer.ts',
+    },
+    bundle: true,
+    define: {
+      'process.env.NEXT_PUBLIC_BUGDROP_API_KEY': JSON.stringify('browser-build-api-key-sentinel'),
+    },
+    format: 'esm',
+    platform: 'browser',
+    write: false,
+  });
+  const output = browserConsumer.outputFiles[0]?.text ?? '';
+  for (const marker of [...forbidden, 'browser-build-api-key-sentinel']) {
+    if (output.includes(marker)) throw new Error(`${specifier} browser bundle contains ${marker}`);
+  }
 }
-
-const serverBrowserConsumer = await build({
-  stdin: {
-    contents: "import '@bugdrop/server';",
-    resolveDir: repositoryRoot,
-    sourcefile: 'server-browser-consumer.ts',
-  },
-  bundle: true,
-  conditions: ['browser'],
-  format: 'esm',
-  platform: 'browser',
-  write: false,
-});
-const serverBrowserText = serverBrowserConsumer.outputFiles[0]?.text ?? '';
-if (
-  !serverBrowserText.includes('@bugdrop/server cannot be imported into browser code') ||
-  serverBrowserText.includes('node:crypto') ||
-  serverBrowserText.includes('Authorization') ||
-  serverBrowserText.includes('bd_api_v1') ||
-  serverBrowserText.includes('bd_auth_v1')
-) {
-  throw new Error('@bugdrop/server browser condition did not fail closed');
+const serverManifest = JSON.parse(
+  await readFile(resolve(repositoryRoot, 'packages/server/package.json'), 'utf8')
+);
+for (const subpath of Object.keys(serverManifest.exports)) {
+  const specifier = '@bugdrop/server' + (subpath === '.' ? '' : subpath.slice(1));
+  const bundled = await build({
+    stdin: { contents: `import '${specifier}';`, resolveDir: repositoryRoot },
+    bundle: true,
+    conditions: ['browser'],
+    format: 'esm',
+    platform: 'browser',
+    write: false,
+  });
+  const output = bundled.outputFiles[0]?.text ?? '';
+  if (
+    !output.includes('@bugdrop/server cannot be imported into browser code') ||
+    /node:crypto|Authorization|bd_api_v[12]|bd_auth_v[12]/.test(output)
+  ) {
+    throw new Error(`${specifier} browser condition did not fail closed`);
+  }
 }
 
 globalThis.process.stdout.write(
