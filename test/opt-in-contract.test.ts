@@ -130,3 +130,36 @@ describe('P0 V2 normative synthetic vectors (not runtime qualification)', () => 
     // This verifier has no issuer state: no failure result purports to prove zero signatures.
   });
 });
+
+describe('P0 scalar types are required even with an authenticated malformed request', () => {
+  const fields = [
+    'attemptId',
+    'credentialId',
+    'installationGeneration',
+    'applicationId',
+    'deploymentDigest',
+    'serverSdkVersion',
+    'browserSdkVersion',
+  ] as const;
+  for (const representation of ['singleton-array', 'nested-array', 'boxed-string']) {
+    it.each(fields)(`rejects ${representation} for %s with a recomputed MAC`, (field) => {
+      const request = structuredClone(fixture.request);
+      const original = request.intent[field];
+      const malformed =
+        representation === 'singleton-array'
+          ? [original]
+          : representation === 'nested-array'
+            ? [[original]]
+            : Object(original);
+      (request.intent as unknown as Record<string, unknown>)[field] = malformed;
+      // Array/object membership is false even if RegExp.test coerces it to a valid
+      // version string; make normalization consistent to isolate scalar rejection.
+      if (field === 'serverSdkVersion')
+        (request.intent.normalizedVersions as Record<string, unknown>).sdkVersion = null;
+      if (field === 'browserSdkVersion')
+        (request.intent.normalizedVersions as Record<string, unknown>).browserSdkVersion = null;
+      const signature = requestSignature(request.intent);
+      expect(() => validateRequest(request, now, signature)).toThrow('invalid_contract');
+    });
+  }
+});

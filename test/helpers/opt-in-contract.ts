@@ -79,6 +79,22 @@ export function validateRequest(request: unknown, now: number, signature: string
   requireValue(request.schemaVersion === 2);
   keys(request.intent, intentKeys);
   const i = request.intent as Intent;
+  for (const key of [
+    'attemptId',
+    'submissionId',
+    'payloadDigest',
+    'applicationId',
+    'credentialId',
+    'keyId',
+    'installationGeneration',
+    'endpoint',
+    'deploymentDigest',
+    'catalogDigest',
+    'origin',
+    'serverSdkVersion',
+    'browserSdkVersion',
+  ] as const)
+    requireValue(typeof i[key] === 'string');
   parseSubmissionBinding({ submissionId: i.submissionId, payloadDigest: i.payloadDigest });
   for (const key of ['attemptId', 'credentialId', 'installationGeneration'] as const)
     requireValue(uuid.test(i[key]));
