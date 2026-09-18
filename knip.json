@@ -21,7 +21,7 @@
       "project": ["src/**/*.ts"]
     },
     "packages/server": {
-      "entry": ["src/index.ts", "src/browser.ts"],
+      "entry": ["src/index.ts", "src/browser.ts", "src/opt-in.ts"],
       "project": ["src/**/*.ts"]
     }
   }
