@@ -40,3 +40,28 @@ The default script is the versioned managed widget at
 customer-proxy, or self-hosting override. It must use HTTPS, except on a loopback development host,
 and cannot contain credentials, a query string, or a fragment. The package never falls back to the
 current public widget.
+
+## Explicit metadata opt-in entrypoint
+
+`@bugdrop/browser/opt-in` exports `BugDropOptIn.init` with the same presentation
+options and a distinct `tokenProviderWithMetadata(binding, metadata)` callback.
+The callback receives the unchanged validated submission binding plus a fresh frozen
+`{ metadataVersion: 1, browserSdkVersion }` object. The version comes from this
+installed browser package, never from caller options, a server version, or widget URL.
+The callback must return the existing short-lived capability envelope only after
+its trusted backend has completed the separately qualified opt-in verification.
+
+The ordinary `@bugdrop/browser` import and its one-argument `tokenProvider` remain
+unchanged. Do not supply both callbacks or mix classic and opt-in initialization on
+one page. Existing direct widget installations are not adopted. An opt-in callback
+failure is redacted and never triggers loader fallback or an automatic retry. A
+second callback request for the same application/submission is rejected, including
+reentry, concurrent requests and requests after failure; the in-memory spent-report
+set lasts for this module's page lifetime and is never written to browser storage.
+This guard is not a service-enforced replay guarantee and does not survive reloads.
+Do not create a replacement submission merely to retry a failed exchange.
+
+The browser loader does not verify the issuer confirmation or implement the hosted
+widget's submission transport. P1/P3 backend integration and qualified V2 verifier
+and hosted-fallback rollout remain separate prerequisites. Loading this entrypoint
+alone does not establish usable V2 service support or authorize publication.

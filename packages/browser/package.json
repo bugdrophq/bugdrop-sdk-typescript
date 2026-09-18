@@ -18,13 +18,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./opt-in": {
+      "types": "./dist/opt-in.d.ts",
+      "import": "./dist/opt-in.js",
+      "require": "./dist/opt-in.cjs"
     }
   },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean --target es2022",
+    "build": "tsup src/index.ts src/opt-in.ts --format esm,cjs --dts --sourcemap --clean --target es2022",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   }
 }
