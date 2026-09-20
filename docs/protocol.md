@@ -188,22 +188,25 @@ cleanup and expiry. The admission-only remote counter still requires SDK transcr
 neither these fixtures nor that counter alone establish complete live staging evidence. Public V1
 contracts and the packed safety handshake remain unchanged.
 
-## P0 opt-in contract (frozen; not implemented)
+## V2 opt-in contract and implementation status
 
 The [V2 wire contract](contracts/opt-in-v2.md), [state and ownership contract](contracts/opt-in-v2-state.md),
 [original authority gates](contracts/opt-in-v2-authority.md) and
 [delivery projection contract](contracts/opt-in-v2-outcomes.md),
 [token isolation](contracts/opt-in-v2-token.md) and
 [approved P0 custody policy](contracts/opt-in-v2-custody.md) record cross-repository
-assumptions against runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
-`0c5ce62f85a88c61fa9605d54f7689f435194c04`. Synthetic `opt-in*.v2.json` fixtures and
-`test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order;
-they do not qualify deployed authentication, original-generation publication, atomic
-signing, queue/SQL delivery or account UI. The official mint metric is approved as
+assumptions against the cited runtime `8db5d879dd4ecde0109a9233e4c8cdfdde1412ab` and web
+`0c5ce62f85a88c61fa9605d54f7689f435194c04` baselines. Synthetic `opt-in*.v2.json`
+fixtures and `test/opt-in-*contract.test.ts` protect canonical vectors, bindings and field order.
+The SDK now also implements separate `@bugdrop/server/opt-in` and `@bugdrop/browser/opt-in`
+entrypoints plus a same-origin reference backend and browser transport. Their local tests cover
+V2 credential derivation, request binding, pinned confirmation verification, browser package
+isolation, bounded transport and coexistence with the classic loader. These tests do not qualify
+deployed authentication, original-generation publication, atomic signing, queue/SQL delivery,
+hosted widget behavior or account UI. The official mint metric is approved as
 durably authorized issuance A, with known signatures and UNKNOWN separate. Durable
 accounting qualification and authority/transport prerequisites remain gates. The user
 accepted original issuer reservedAt+720h private-state retention, finite replay prevention
-and fail-closed ambiguity/storage behavior. P0 is frozen; listed implementation interfaces
-and qualification requirements remain open, with runtime work still on hold. Existing exports and V1
-contracts are unchanged; no runtime implementation or publication is authorized by
-this proposal.
+and fail-closed ambiguity/storage behavior. P0 is frozen; cross-repository qualification
+requirements remain open. The ordinary V1 exports and contracts remain unchanged. The P0
+proposal alone does not authorize deployment or package publication.
