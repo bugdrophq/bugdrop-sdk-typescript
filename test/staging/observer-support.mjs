@@ -4,13 +4,14 @@ import { createObserverLease } from '../../scripts/staging/observer.mjs';
 import { runId } from './safety-support.mjs';
 
 // Synthetic private transport fixture, never a remote observation or credential.
-export function observerFixture() {
+export function observerFixture(overrides = {}) {
   const key = randomBytes(32).toString('base64url');
   const scope = {
     applicationId: 'test-app',
     installationId: '202',
     runId,
     scenario: 'origin-aliases',
+    ...overrides,
   };
   const state = {
     leaseId: randomUUID(),
@@ -61,7 +62,7 @@ export function observerFixture() {
       expiresAt: state.expiresAt,
       sequence: null,
       snapshot: {
-        runId,
+        runId: scope.runId,
         scenario: scope.scenario,
         applicationId: scope.applicationId,
         count: state.exchanges.length,
