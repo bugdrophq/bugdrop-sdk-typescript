@@ -19,41 +19,9 @@ track the people using the customer application. Your token endpoint must apply 
 own authentication, authorization, suspension, abuse-prevention, and user-specific rate limits,
 along with its usual same-origin and CSRF protections, before calling BugDrop.
 
-```ts
-// Server-only code
-import { BugDrop } from '@bugdrop/server';
-
-const bugdrop = new BugDrop({ apiKey: process.env.BUGDROP_API_KEY });
-
-export async function POST(request: Request): Promise<Response> {
-  await requireAuthorizedUser(request); // application-owned access control
-  const { submissionId, payloadDigest } = await request.json();
-  const capability = await bugdrop.createSubmissionToken({ submissionId, payloadDigest });
-  return Response.json(capability, { headers: { 'Cache-Control': 'no-store' } });
-}
-```
-
-```ts
-// Browser code
-import { BugDrop } from '@bugdrop/browser';
-
-BugDrop.init({
-  applicationId: 'app_public_123',
-  tokenProvider: async (binding) => {
-    const response = await fetch('/api/bugdrop-token', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': readCsrfToken(),
-      },
-      body: JSON.stringify(binding),
-    });
-    if (!response.ok) throw new Error('Unable to authorize BugDrop');
-    return response.json();
-  },
-});
-```
+Use the [V1 customer backend reference](examples/v1-backend/README.md) for a bounded same-origin
+route, a required customer access/CSRF policy, and a browser token provider. The example's local
+fixture tests do not establish deployed service or hosted widget readiness.
 
 Do not accept repository, installation, labels, flow permissions, or origin overrides from the
 browser. Those values are resolved from the Application on BugDrop's servers.

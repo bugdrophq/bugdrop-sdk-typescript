@@ -9,14 +9,17 @@
         "scripts/staging/worker.mjs",
         "scripts/staging/observer.mjs",
         "examples/opt-in-backend/handler.ts",
-        "examples/opt-in-backend/transport.ts"
+        "examples/opt-in-backend/transport.ts",
+        "examples/v1-backend/handler.ts",
+        "examples/v1-backend/transport.ts"
       ],
       "project": [
         "scripts/**/*.mjs",
         "test/**/*.ts",
         "*.{ts,mjs}",
         "test/staging/**/*.mjs",
-        "examples/opt-in-backend/*.ts"
+        "examples/opt-in-backend/*.ts",
+        "examples/v1-backend/*.ts"
       ],
       "ignoreDependencies": ["@bugdrop/server", "@bugdrop/browser"]
     },

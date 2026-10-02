@@ -4,6 +4,7 @@ import { checkEvidenceAssertions } from './integration/evidence-checks.mjs';
 import { checkService } from './integration/service-checks.mjs';
 import { installConsumer, readFixtures } from './integration/packed-consumer.mjs';
 import { checkTransport } from './integration/transport-checks.mjs';
+import { checkV1Reference } from './integration/v1-reference-checks.mjs';
 
 const repository = resolve(import.meta.dirname, '..');
 const consumer = await installConsumer(repository);
@@ -11,6 +12,7 @@ try {
   const fixtures = await readFixtures(repository);
   checkEvidenceAssertions(fixtures, consumer.versions.server);
   await checkTransport(consumer, fixtures);
+  await checkV1Reference(repository, consumer, fixtures);
   if (process.argv.includes('--service')) {
     const adapter = process.env.BUGDROP_LOCAL_SERVICE_ADAPTER;
     if (!adapter || !isAbsolute(adapter)) {
