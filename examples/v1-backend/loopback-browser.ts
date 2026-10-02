@@ -3,29 +3,40 @@ import { createV1TokenProvider } from './transport.js';
 
 const button = document.querySelector<HTMLButtonElement>('#exchange');
 const result = document.querySelector<HTMLElement>('#result');
-if (!button || !result || typeof BugDrop.init !== 'function')
-  throw new Error('fixture unavailable');
+if (!button || !result) throw new Error('fixture unavailable');
+
 const csrf = button.dataset.csrf ?? '';
-const provider = createV1TokenProvider(() => csrf);
+const controller = BugDrop.init({
+  applicationId: 'app_local_loopback',
+  widgetUrl: `${location.origin}/local-widget.js`,
+  tokenProvider: createV1TokenProvider(() => csrf),
+  button: false,
+});
+
+window.addEventListener('bugdrop:local-result', (event) => {
+  const status = (event as CustomEvent<{ ok: boolean }>).detail?.ok;
+  result.textContent = status
+    ? 'Local capability received. No submission sent.'
+    : 'Unable to authorize BugDrop';
+  button.disabled = false;
+});
+
 button.addEventListener('click', async () => {
   button.disabled = true;
   result.textContent = 'Requesting local capability…';
   try {
-    const payload = new TextEncoder().encode('local fixture payload v1');
-    const digest = await crypto.subtle.digest('SHA-256', payload);
-    const payloadDigest = btoa(String.fromCharCode(...new Uint8Array(digest)))
-      .replaceAll('+', '-')
-      .replaceAll('/', '_')
-      .replaceAll('=', '');
-    const savedId = sessionStorage.getItem('bugdrop-v1-pending-id');
-    const submissionId = savedId && /^[a-f0-9-]{36}$/.test(savedId) ? savedId : crypto.randomUUID();
-    sessionStorage.setItem('bugdrop-v1-pending-id', submissionId);
-    const capability = await provider({ submissionId, payloadDigest });
-    sessionStorage.removeItem('bugdrop-v1-pending-id');
-    result.textContent = `Local capability received; expires ${capability.expiresAt}. No submission sent.`;
+    await controller.open();
   } catch {
-    result.textContent = 'Unable to authorize BugDrop';
-  } finally {
+    result.textContent = 'Unable to load local widget double';
     button.disabled = false;
   }
 });
+
+void controller.ready.then(
+  () => {
+    button.disabled = false;
+  },
+  () => {
+    result.textContent = 'Unable to load local widget double';
+  }
+);
