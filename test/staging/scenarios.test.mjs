@@ -94,11 +94,24 @@ function testDouble({
       return true;
     },
   };
+  const consumer = { BugDrop, versions: { server: '0.1.0' } };
+  const runId = '12345678-1234-4234-8234-123456789abc';
   return {
     provider,
     oracle,
-    runId: '12345678-1234-4234-8234-123456789abc',
-    consumer: { BugDrop, versions: { server: '0.1.0' } },
+    runId,
+    consumer,
+    remoteCapability: {
+      runId,
+      async openScenario({ consumer: packed, service, fixtureApiKey }) {
+        assert.equal(packed, consumer);
+        assert.equal(service.endpoint, target.endpoint);
+        assert.equal(service.origin, target.origin);
+        const apiKey = await service.resolveApiKey();
+        assert.notEqual(apiKey, fixtureApiKey);
+        return { apiKey, client: new packed.BugDrop({ apiKey, endpoint: target.endpoint }) };
+      },
+    },
     closed,
     observed,
     exchanges,
