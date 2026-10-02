@@ -15,6 +15,37 @@ const capability = () => ({
   expiresAt: new Date(Date.now() + 240_000).toISOString(),
 });
 
+describe('V1 browser loopback transport', () => {
+  it.each([
+    'http://localhost:3000',
+    'http://bugdrop.localhost:3000',
+    'http://127.0.0.1:8787',
+    'http://[::1]:8787',
+  ])('permits canonical HTTP loopback %s', async (candidate) => {
+    vi.stubGlobal('location', { protocol: 'http:', origin: candidate });
+    const browserFetch = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify(capability()), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        })
+    );
+    vi.stubGlobal('fetch', browserFetch);
+    expect(await createV1TokenProvider(() => 'csrf-fixture')(binding)).toEqual(capability());
+    expect(browserFetch).toHaveBeenCalledOnce();
+    expect(browserFetch.mock.calls[0]![0]).toBe(`${candidate}/api/bugdrop-capability/v1`);
+  });
+
+  it('rejects public HTTP before any browser request', async () => {
+    vi.stubGlobal('location', { protocol: 'http:', origin: 'http://app.example.com' });
+    const browserFetch = vi.fn();
+    vi.stubGlobal('fetch', browserFetch);
+    await expect(createV1TokenProvider(() => 'csrf-fixture')(binding)).rejects.toThrow(
+      /^Unable to authorize BugDrop$/
+    );
+    expect(browserFetch).not.toHaveBeenCalled();
+  });
+});
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime('2026-10-02T12:00:00.000Z');

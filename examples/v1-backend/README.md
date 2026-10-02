@@ -3,7 +3,8 @@
 This framework-neutral example connects `@bugdrop/browser` to `@bugdrop/server` through the
 customer's backend. It is a local customer transport example, not a hosted service or widget
 qualification. Mount `createV1Handler` at exactly `POST /api/bugdrop-capability/v1` on the
-configured HTTPS application origin. The route accepts only `submissionId` and `payloadDigest`.
+configured HTTPS application origin (HTTP only for canonical loopback origins, including
+`.localhost`). The route accepts only `submissionId` and `payloadDigest`.
 
 ## Customer backend
 
@@ -16,19 +17,24 @@ const handle = createV1Handler(
     origin: 'https://your-app.example',
     // endpoint may be overridden for an approved staging or local target.
   },
-  async (request) => {
+  async (request, binding) => {
     // Replace with the customer's real session, CSRF, authorization and rate checks.
-    // Only an explicit true permits the exchange. Inspect headers; do not read/log body.
-    return await verifySessionAndCsrfAndRateLimit(request);
+    // Atomically record submissionId -> payloadDigest, or reject a different digest.
+    // Only an explicit true permits the exchange. Do not read/log the body.
+    return await verifyCustomerPolicyAndBinding(request, binding);
   }
 );
 ```
 
 There is no default allow policy. The handler checks exact request URL and Origin before the
 customer policy. The policy must verify the authenticated session and compare the browser's
-`X-BugDrop-CSRF-Token` to the customer's server-side expected value. A browser-supplied header
-alone is not authorization. For anonymous use, implement an explicit policy with equivalent
-abuse and CSRF protection; never deploy a placeholder `() => true`.
+`X-BugDrop-CSRF-Token` to the customer's server-side expected value. It receives a frozen parsed
+binding before the issuer exchange. Within the customer's authorized scope, atomically and durably
+insert `submissionId -> payloadDigest` if absent; if the ID exists, allow only the same digest and
+reject a different one. Retain this check for the customer's relevant submission/replay lifetime.
+The map and user/session identity stay in customer storage and never go to BugDrop. A
+browser-supplied header alone is not authorization. For anonymous use, implement an explicit policy
+with equivalent abuse and CSRF protection; never deploy a placeholder `() => true`.
 
 Keep the API key only in server configuration. The handler forwards no cookies, CSRF token,
 identity, repository selector or browser-supplied authority to BugDrop. It supplies configured
@@ -52,7 +58,8 @@ BugDrop.init({
 ```
 
 Import only `transport.ts` into browser code. The CSRF source returns the customer's current
-anti-CSRF token; it is distinct from the BugDrop API key. The transport sends one same-origin
+anti-CSRF token; it is distinct from the BugDrop API key. The transport permits canonical HTTP
+loopback origins for development and otherwise requires HTTPS. It sends one same-origin
 credentialed POST with `redirect: 'error'`, `cache: 'no-store'`, and no referrer. It bounds request
 and response bytes, accepts only the V1 capability envelope, and throws a fixed error on failure.
 The browser SDK performs the final canonical lifetime check before passing the opaque token to

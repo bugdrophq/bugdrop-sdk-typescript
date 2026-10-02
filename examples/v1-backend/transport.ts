@@ -11,7 +11,16 @@ export function createV1TokenProvider(csrfToken: () => string): SubmissionTokenP
   return async (binding) => {
     try {
       const origin = globalThis.location.origin;
-      if (globalThis.location.protocol !== 'https:') throw new Error();
+      const url = new URL(origin);
+      const loopback =
+        ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+        url.hostname.endsWith('.localhost');
+      if (
+        url.origin !== origin ||
+        globalThis.location.protocol !== url.protocol ||
+        (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback))
+      )
+        throw new Error();
       if (
         !binding ||
         typeof binding !== 'object' ||

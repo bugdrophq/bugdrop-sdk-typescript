@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import credential from '../packages/contracts/fixtures/api-key-credential.v1.json';
 import bindingFixture from '../packages/contracts/fixtures/submission-binding.v1.json';
+import originFixture from '../packages/contracts/fixtures/origin.v1.json';
 import { createV1Handler } from '../examples/v1-backend/handler.js';
 
 const origin = 'https://app.example.com';
@@ -173,6 +174,8 @@ describe('V1 customer backend body and upstream failures', () => {
     JSON.stringify({ ...binding, repository: 'private-canary' }),
     JSON.stringify({ ...binding, payloadDigest: 'bad' }),
     JSON.stringify({ ...binding, submissionId: ['id'] }),
+    JSON.stringify({ ...binding, submissionId: '\ud800' }),
+    JSON.stringify({ ...binding, submissionId: 'x'.repeat(201) }),
     body.replace('"submissionId":', '"submissionId":"earlier","submissionId":'),
     body.replace('"payloadDigest":', '"payloadDigest":"earlier","payload\\u0044igest":'),
     '{}',
@@ -184,6 +187,19 @@ describe('V1 customer backend body and upstream failures', () => {
   ])('rejects malformed or authority-bearing body before exchange %#', async (content) => {
     const exchange = upstream();
     await denied(await createV1Handler(options(exchange), () => true)(makeRequest(content)));
+    expect(exchange).not.toHaveBeenCalled();
+  });
+
+  it('does not let invalid binding values reserve customer policy state', async () => {
+    const exchange = upstream();
+    const customerPolicy = vi.fn(() => true);
+    await denied(
+      await createV1Handler(
+        options(exchange),
+        customerPolicy
+      )(makeRequest(JSON.stringify({ ...binding, payloadDigest: 'bad' })))
+    );
+    expect(customerPolicy).not.toHaveBeenCalled();
     expect(exchange).not.toHaveBeenCalled();
   });
 
@@ -238,5 +254,48 @@ describe('V1 customer backend body and upstream failures', () => {
     );
     await denied(await createV1Handler(options(exchange), () => true)(makeRequest()));
     expect(exchange).toHaveBeenCalledOnce();
+  });
+});
+
+describe('V1 origin fixture and binding-aware customer policy', () => {
+  it.each(originFixture.valid)('accepts canonical configured origin %s', async (candidate) => {
+    const exchange = upstream();
+    const handler = createV1Handler({ ...options(exchange), origin: candidate }, () => true);
+    const result = await handler(
+      new Request(`${candidate}/api/bugdrop-capability/v1`, {
+        method: 'POST',
+        headers: { Origin: candidate, 'Content-Type': 'application/json' },
+        body,
+      })
+    );
+    expect(result.status).toBe(200);
+    expect(exchange).toHaveBeenCalledOnce();
+    expect(JSON.parse(String(exchange.mock.calls[0]![1]?.body)).origin).toBe(candidate);
+  });
+
+  it.each(originFixture.invalid)('rejects noncanonical or public HTTP origin %s', (candidate) => {
+    expect(() =>
+      createV1Handler({ ...options(upstream()), origin: candidate }, () => true)
+    ).toThrow('origin');
+  });
+
+  it('passes frozen binding and rejects same ID with changed digest before a second exchange', async () => {
+    const exchange = upstream();
+    const recorded = new Map<string, string>();
+    const customerPolicy = vi.fn((_request: Request, candidate: Readonly<typeof binding>) => {
+      expect(Object.isFrozen(candidate)).toBe(true);
+      const previous = recorded.get(candidate.submissionId);
+      if (previous !== undefined && previous !== candidate.payloadDigest) return false;
+      recorded.set(candidate.submissionId, candidate.payloadDigest);
+      return true;
+    });
+    const handler = createV1Handler(options(exchange), customerPolicy);
+    expect((await handler(makeRequest())).status).toBe(200);
+    expect(exchange).toHaveBeenCalledOnce();
+    const changed = { ...binding, payloadDigest: 'A'.repeat(43) };
+    await denied(await handler(makeRequest(JSON.stringify(changed))));
+    expect(customerPolicy).toHaveBeenCalledTimes(2);
+    expect(exchange).toHaveBeenCalledOnce();
+    expect(recorded.get(binding.submissionId)).toBe(binding.payloadDigest);
   });
 });
