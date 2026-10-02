@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -120,5 +120,15 @@ describe('runnable V1 customer loopback fixture', () => {
     ]);
     expect(responses.map((response) => response.status).sort()).toEqual([200, 502]);
     expect(fixture.exchanges()).toBe(1);
+  });
+
+  it('denies a session write failure without terminating the loopback server', async () => {
+    const { fixture, path } = await start();
+    const sessions = join(path, 'sessions');
+    await rm(sessions, { recursive: true });
+    await writeFile(sessions, 'blocked');
+    expect((await nativeFetch(fixture.origin)).status).toBe(502);
+    expect((await nativeFetch(`${fixture.origin}/fixture.js`)).status).toBe(200);
+    expect(fixture.exchanges()).toBe(0);
   });
 });

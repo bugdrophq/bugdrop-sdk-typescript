@@ -62,7 +62,9 @@ export async function createLoopbackPolicy(stateDirectory: string) {
       .map((part) => part.trim())
       .filter((part) => part.startsWith('bd_loopback_session='));
     if (!matches || matches.length !== 1) return null;
-    const id = matches[0].slice('bd_loopback_session='.length);
+    const match = matches[0];
+    if (!match) return null;
+    const id = match.slice('bd_loopback_session='.length);
     if (!/^[a-f0-9]{64}$/.test(id)) return null;
     try {
       const saved = JSON.parse(await readFile(join(sessions, id), 'utf8')) as Session;

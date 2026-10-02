@@ -53,7 +53,13 @@ export async function startLoopback(stateDirectory: string, browserScript: strin
       return;
     }
     if (request.method === 'GET' && request.url === '/') {
-      const active = await storage.issue(request.headers.cookie ?? null);
+      let active;
+      try {
+        active = await storage.issue(request.headers.cookie ?? null);
+      } catch {
+        deny(response);
+        return;
+      }
       response.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store',
