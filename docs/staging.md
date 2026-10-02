@@ -57,6 +57,22 @@ are not a sandbox or a hash of transitive imports. Provider and oracle modules m
 initialization. Never use unreviewed modules, monkey-patched fetch, synthetic evidence, or the local
 Miniflare adapter as remote proof.
 
+## SDK-owned remote issuance handoff
+
+The private `scripts/staging/remote-capability-provider.mjs` helper pins a provider's read-only
+`inspectTarget()` result to the approved target and run ID before scenario credentials are resolved.
+For each scenario it checks the provider endpoint and origin, rejects the public fixture API key,
+and constructs the installed `@bugdrop/server` client with the scenario's server-only API key and
+the approved V1 endpoint. The worker uses this helper for its seven SDK issuance scenarios.
+Its packed-consumer check injects fake HTTP and verifies the V1 request bytes and bearer derivation;
+it also proves that mismatched target or endpoint preflight sends no request and resolves no key.
+The helper is test support, not a public SDK export or a staging provider entry point.
+
+The authoritative provider must still supply independently read deployment identity, isolated
+scenario credentials, hosted submission and private controls. The separate oracle must still
+substantiate remote exchange and side-effect evidence. This helper performs no hosted request by
+itself and does not qualify a positive capability exchange, submission, or Issue delivery.
+
 ## Coordinated test-only interface
 
 The Cloudflare provider exports `inspectTarget()` and `startScenario({ name, submissionId, runId })`.

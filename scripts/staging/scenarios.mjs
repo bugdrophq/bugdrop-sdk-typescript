@@ -3,23 +3,27 @@ import { randomUUID } from 'node:crypto';
 import { credentialCanaries } from './canaries.mjs';
 import { observeAttempts } from './attempts.mjs';
 
-export async function runScenarios({ consumer, fixtures, provider, oracle, target, runId }) {
+export async function runScenarios({
+  consumer,
+  fixtures,
+  provider,
+  oracle,
+  target,
+  runId,
+  remoteCapability,
+}) {
+  assert.equal(remoteCapability.runId, runId);
   const names = ['delivered', 'origin', 'tampered', 'binding', 'revoked', 'stale', 'indeterminate'];
   for (const name of names) {
     const submissionId = randomUUID();
     const service = await provider.startScenario({ name, submissionId, runId });
     let observed;
     try {
-      assert.equal(service.endpoint, target.endpoint);
-      assert.equal(service.origin, target.origin);
-      const apiKey = await service.resolveApiKey();
-      assert.equal(typeof apiKey, 'string');
-      assert.notEqual(
-        apiKey,
-        fixtures['api-key-credential'].apiKey,
-        'Fixture credentials are not staging credentials'
-      );
-      const client = new consumer.BugDrop({ apiKey, endpoint: target.endpoint });
+      const { apiKey, client } = await remoteCapability.openScenario({
+        consumer,
+        service,
+        fixtureApiKey: fixtures['api-key-credential'].apiKey,
+      });
       observed = observeAttempts(client, {
         runId,
         scenario: name,

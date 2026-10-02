@@ -8,6 +8,7 @@ import { installConsumer, readFixtures } from '../integration/packed-consumer.mj
 import { runScenarios } from './scenarios.mjs';
 import { assertSafetyRunner, runSafety } from './safety.mjs';
 import { completionReceipt } from './receipt.mjs';
+import { preflightRemoteCapabilityProvider } from './remote-capability-provider.mjs';
 
 async function pinnedModule(path, digest) {
   assert.equal(
@@ -29,14 +30,24 @@ try {
   assertSafetyRunner(runner);
   assert.equal(typeof provider.startSafetyScenario, 'function');
   // This provider operation must be read-only. No scenario controls run before exact target match.
-  const { runId, ...inspected } = await provider.inspectTarget();
-  assert.match(runId, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
-  assert.deepEqual(inspected, config.target);
+  const remoteCapability = await preflightRemoteCapabilityProvider({
+    target: config.target,
+    inspectTarget: () => provider.inspectTarget(),
+  });
+  const { runId } = remoteCapability;
   const repository = resolve(import.meta.dirname, '../..');
   consumer = await installConsumer(repository);
   assertSafetyRunner(runner, consumer.versions.server);
   const fixtures = await readFixtures(repository);
-  await runScenarios({ consumer, fixtures, provider, oracle, target: config.target, runId });
+  await runScenarios({
+    consumer,
+    fixtures,
+    provider,
+    oracle,
+    target: config.target,
+    runId,
+    remoteCapability,
+  });
   await runSafety({ consumer, fixtures, provider, runner, target: config.target, runId });
   const receipt = completionReceipt({
     target: config.target,

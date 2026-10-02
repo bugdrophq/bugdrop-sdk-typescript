@@ -6,6 +6,7 @@ import { installConsumer, readFixtures } from '../../scripts/integration/packed-
 import { runScenarios } from '../../scripts/staging/scenarios.mjs';
 import { safetyProvider } from '../../scripts/staging/safety-provider.mjs';
 import { credentialCanaries } from '../../scripts/staging/canaries.mjs';
+import { preflightRemoteCapabilityProvider } from '../../scripts/staging/remote-capability-provider.mjs';
 import { runId } from './safety-support.mjs';
 import { target as baseTarget } from './support.mjs';
 import { providerObserverFixture } from './provider-observer-support.mjs';
@@ -32,12 +33,17 @@ test('packed SDK and signed observer reconcile all seven provider scenarios exac
   const { local, target } = await setup();
   const attested = [];
   try {
+    const remoteCapability = await preflightRemoteCapabilityProvider({
+      target,
+      inspectTarget: async () => ({ ...target, runId }),
+    });
     await runScenarios({
       consumer,
       fixtures,
       provider: local.provider,
       target,
       runId,
+      remoteCapability,
       oracle: {
         assertEvidence({ evidence, expected }) {
           assert.equal(expected.sdkVersion, consumer.versions.server);
