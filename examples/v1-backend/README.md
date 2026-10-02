@@ -62,6 +62,8 @@ anti-CSRF token; it is distinct from the BugDrop API key. The transport permits 
 loopback origins for development and otherwise requires HTTPS. It sends one same-origin
 credentialed POST with `redirect: 'error'`, `cache: 'no-store'`, and no referrer. It bounds request
 and response bytes, accepts only the V1 capability envelope, and throws a fixed error on failure.
+One eight-second deadline covers both fetch and body read; timeout aborts and settles even if the
+underlying fetch or stream cancellation never completes. There is no retry.
 The browser SDK performs the final canonical lifetime check before passing the opaque token to
 the hosted widget. Do not retry automatically after an ambiguous exchange.
 

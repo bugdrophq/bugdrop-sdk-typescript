@@ -83,6 +83,7 @@ describe('V1 browser customer transport', () => {
         credentials: 'same-origin',
         cache: 'no-store',
         referrerPolicy: 'no-referrer',
+        signal: expect.any(AbortSignal),
       });
       return handler(
         new Request(String(target), {
@@ -151,5 +152,77 @@ describe('V1 browser customer transport', () => {
     expect(result.outputFiles![0]!.text).not.toMatch(
       /bd_api|bd_auth|node:crypto|createV1Handler|Authorization/
     );
+  });
+});
+
+describe('V1 browser deadline', () => {
+  it('settles a never-resolving fetch at eight seconds despite ignored abort', async () => {
+    let signal: AbortSignal | undefined;
+    const browserFetch = vi.fn<typeof fetch>((_target, init) => {
+      signal = init?.signal as AbortSignal;
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal('fetch', browserFetch);
+    const pending = Promise.resolve(createV1TokenProvider(() => 'csrf-fixture')(binding));
+    const assertion = expect(pending).rejects.toThrow(/^Unable to authorize BugDrop$/);
+    let settled = false;
+    void pending.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      }
+    );
+    await vi.advanceTimersByTimeAsync(7999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await assertion;
+    expect(signal?.aborted).toBe(true);
+    expect(browserFetch).toHaveBeenCalledOnce();
+  });
+
+  it('settles a stalled 200 body without waiting for stream cancellation', async () => {
+    const cancel = vi.fn(() => new Promise<void>(() => {}));
+    let signal: AbortSignal | undefined;
+    const browserFetch = vi.fn<typeof fetch>(async (_target, init) => {
+      signal = init?.signal as AbortSignal;
+      return new Response(new ReadableStream({ cancel }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      });
+    });
+    vi.stubGlobal('fetch', browserFetch);
+    const pending = createV1TokenProvider(() => 'csrf-fixture')(binding);
+    const assertion = expect(pending).rejects.toThrow(/^Unable to authorize BugDrop$/);
+    await vi.advanceTimersByTimeAsync(8000);
+    await assertion;
+    expect(signal?.aborted).toBe(true);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(browserFetch).toHaveBeenCalledOnce();
+  });
+
+  it('discards a response that arrives after the deadline', async () => {
+    let release!: (response: Response) => void;
+    const browserFetch = vi.fn<typeof fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        })
+    );
+    vi.stubGlobal('fetch', browserFetch);
+    const pending = createV1TokenProvider(() => 'csrf-fixture')(binding);
+    const assertion = expect(pending).rejects.toThrow(/^Unable to authorize BugDrop$/);
+    await vi.advanceTimersByTimeAsync(8000);
+    await assertion;
+    const cancel = vi.fn(() => new Promise<void>(() => {}));
+    release(
+      new Response(new ReadableStream({ cancel }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      })
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(browserFetch).toHaveBeenCalledOnce();
   });
 });
