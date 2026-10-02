@@ -4,6 +4,8 @@
     "lib": ["ES2022", "DOM"],
     "types": ["node", "vitest/globals"],
     "paths": {
+      "@bugdrop/server": ["./packages/server/src/index.ts"],
+      "@bugdrop/browser": ["./packages/browser/src/index.ts"],
       "@bugdrop/server/opt-in": ["./packages/server/src/opt-in.ts"],
       "@bugdrop/browser/opt-in": ["./packages/browser/src/opt-in.ts"]
     }
@@ -12,7 +14,8 @@
     "packages/**/*.ts",
     "test/**/*.ts",
     "vitest.config.ts",
-    "examples/opt-in-backend/*.ts"
+    "examples/opt-in-backend/*.ts",
+    "examples/v1-backend/*.ts"
   ],
   "exclude": ["packages/*/dist"]
 }

@@ -5,13 +5,18 @@ export default defineConfig({
     alias: {
       '@bugdrop/server/opt-in': new URL('./packages/server/src/opt-in.ts', import.meta.url)
         .pathname,
+      '@bugdrop/server': new URL('./packages/server/src/index.ts', import.meta.url).pathname,
     },
   },
   test: {
     include: ['test/**/*.test.ts'],
     clearMocks: true,
     coverage: {
-      include: ['packages/*/src/**/*.ts', 'examples/opt-in-backend/*.ts'],
+      include: [
+        'packages/*/src/**/*.ts',
+        'examples/opt-in-backend/*.ts',
+        'examples/v1-backend/*.ts',
+      ],
       provider: 'v8',
       reporter: ['text', 'json-summary', 'lcov'],
       thresholds: {
