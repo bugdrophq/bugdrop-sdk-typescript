@@ -28,7 +28,11 @@ function safeFraming(request: IncomingMessage): boolean {
   return count('host') === 1 && count('content-length') <= 1 && count('transfer-encoding') === 0;
 }
 
-export async function startLoopback(stateDirectory: string, browserScript: string) {
+export async function startLoopback(
+  stateDirectory: string,
+  browserScript: string,
+  widgetScript = '/* local widget double */'
+) {
   const storage = await createLoopbackPolicy(stateDirectory);
   let origin = '';
   let exchanges = 0;
@@ -69,7 +73,7 @@ export async function startLoopback(stateDirectory: string, browserScript: strin
       });
       response.end(`<!doctype html><meta charset="utf-8"><title>BugDrop V1 loopback fixture</title>
 <h1>BugDrop V1 local customer fixture</h1><p>Local mock capability only. No hosted submission.</p>
-<button id="exchange" data-csrf="${active.csrf}">Request local capability</button>
+<button id="exchange" data-csrf="${active.csrf}" disabled>Request local capability</button>
 <pre id="result" aria-live="polite"></pre><script src="/fixture.js"></script>`);
       return;
     }
@@ -80,6 +84,15 @@ export async function startLoopback(stateDirectory: string, browserScript: strin
           'Cache-Control': 'no-store',
         })
         .end(browserScript);
+      return;
+    }
+    if (request.method === 'GET' && request.url === '/local-widget.js') {
+      response
+        .writeHead(200, {
+          'Content-Type': 'text/javascript; charset=utf-8',
+          'Cache-Control': 'no-store',
+        })
+        .end(widgetScript);
       return;
     }
     if (request.method !== 'POST' || request.url !== '/api/bugdrop-capability/v1') {

@@ -80,17 +80,21 @@ npm run example:v1:loopback -- --state-dir /absolute/private/bugdrop-loopback-st
 ```
 
 Open the printed `http://127.0.0.1:<port>/` URL and click **Request local capability**. The
-page invokes the V1 browser transport, the local route checks a cookie-backed session and CSRF
-token, then the server SDK calls an injected local issuer stub. No external issuer, widget,
-ingress, or delivery endpoint is contacted. The server binds each `submissionId` to its
+page initializes `@bugdrop/browser` with a same-origin, fixture-only widget double. A click asks
+that double to call the browser loader's registered token-provider hook with the local submission
+binding. The V1 browser transport then calls the same-origin route, which checks a cookie-backed
+session and CSRF token before the server SDK calls an injected local issuer stub. The double does
+not send a submission or expose the token in the page. No external issuer, hosted widget, ingress,
+or delivery endpoint is contacted. The server binds each `submissionId` to its
 `payloadDigest` and session in the specified directory using a synced file and rejects a changed
 digest or a second session. The directory is single-process locked; after an unclean exit, remove
 `active.lock` only after verifying the fixture is stopped. Keep this directory private and do not
 use it for production customer data.
 
-The browser keeps an unfinished submission ID in tab session storage. After an ambiguous failure,
-click again to explicitly retry the same binding; it never retries automatically. A successful
-response clears the pending ID. The local issuer returns an opaque test token that cannot be used
-as hosted acceptance evidence. This fixture's anonymous loopback session policy is for local
-dogfood only; a deployed customer route still needs real customer authorization, durable storage,
-rate limits, operational timeouts, and the HTTPS ingress controls described above.
+The local widget double keeps an unfinished ID and digest in tab session storage. After an ambiguous
+failure, click again to explicitly retry that exact binding; it never retries automatically. A
+successful response clears the pending binding. A widget load failure makes no token request. The
+local issuer returns an opaque test token that cannot be used as hosted acceptance evidence. This
+fixture's anonymous loopback session policy is for local dogfood only; a deployed customer route
+still needs real customer authorization, durable storage, rate limits, operational timeouts, and
+the HTTPS ingress controls described above.
