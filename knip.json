@@ -11,7 +11,10 @@
         "examples/opt-in-backend/handler.ts",
         "examples/opt-in-backend/transport.ts",
         "examples/v1-backend/handler.ts",
-        "examples/v1-backend/transport.ts"
+        "examples/v1-backend/transport.ts",
+        "examples/v1-backend/loopback-server.ts",
+        "examples/v1-backend/loopback-browser.ts",
+        "examples/v1-backend/run.mjs"
       ],
       "project": [
         "scripts/**/*.mjs",
