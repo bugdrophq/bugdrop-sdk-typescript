@@ -58,7 +58,6 @@ async function page(fixture: Fixture, csrfOverride?: string) {
   });
   vi.stubGlobal('fetch', browserFetch);
   vi.resetModules();
-  vi.doMock('@bugdrop/browser', async () => import('../packages/browser/src/index.js'));
   await import('../examples/v1-backend/loopback-browser.js');
   const script = document.querySelector<HTMLScriptElement>('script[data-auth-token-provider]')!;
   expect(script.src).toBe(`${fixture.origin}/local-widget.js`);

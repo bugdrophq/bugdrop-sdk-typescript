@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
+      '@bugdrop/browser': new URL('./packages/browser/src/index.ts', import.meta.url).pathname,
       '@bugdrop/server/opt-in': new URL('./packages/server/src/opt-in.ts', import.meta.url)
         .pathname,
       '@bugdrop/server': new URL('./packages/server/src/index.ts', import.meta.url).pathname,
