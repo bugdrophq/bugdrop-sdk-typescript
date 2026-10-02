@@ -147,7 +147,7 @@ describe('local widget handoff through the real browser loader', () => {
     expect(browserFetch).toHaveBeenCalledOnce();
   });
 
-  it('denies a changed digest for an already-used submission ID before the issuer', async () => {
+  it('rejects a changed pending digest before another route or issuer call', async () => {
     const fixture = await start();
     const { browserFetch, button, script, dom } = await page(fixture);
     installLocalWidget(script);
@@ -164,8 +164,22 @@ describe('local widget handoff through the real browser loader', () => {
     );
     await click(button);
     expect(document.querySelector('#result')?.textContent).toBe('Unable to authorize BugDrop');
-    expect(browserFetch).toHaveBeenCalledTimes(2);
+    expect(browserFetch).toHaveBeenCalledTimes(1);
     expect(fixture.exchanges()).toBe(1);
+  });
+
+  it('keeps corrupted pending storage closed instead of generating a new submission ID', async () => {
+    const fixture = await start();
+    const { browserFetch, button, script, dom } = await page(fixture);
+    sessionStorage.setItem('bugdrop-v1-pending-binding', '{broken');
+    installLocalWidget(script);
+    script.dispatchEvent(new dom.window.Event('load'));
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    await click(button);
+    expect(document.querySelector('#result')?.textContent).toBe('Unable to authorize BugDrop');
+    expect(sessionStorage.getItem('bugdrop-v1-pending-binding')).toBe('{broken');
+    expect(browserFetch).not.toHaveBeenCalled();
+    expect(fixture.exchanges()).toBe(0);
   });
 
   it('does not request a capability when the local widget fails to load', async () => {

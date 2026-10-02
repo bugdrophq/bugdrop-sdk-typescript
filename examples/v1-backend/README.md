@@ -93,7 +93,9 @@ use it for production customer data.
 
 The local widget double keeps an unfinished ID and digest in tab session storage. After an ambiguous
 failure, click again to explicitly retry that exact binding; it never retries automatically. A
-successful response clears the pending binding. A widget load failure makes no token request. The
+successful response clears the pending binding. A corrupted pending binding fails closed; inspect
+the local tab's session storage before clearing it rather than silently creating a new ID. A widget
+load failure makes no token request. The
 local issuer returns an opaque test token that cannot be used as hosted acceptance evidence. This
 fixture's anonymous loopback session policy is for local dogfood only; a deployed customer route
 still needs real customer authorization, durable storage, rate limits, operational timeouts, and
