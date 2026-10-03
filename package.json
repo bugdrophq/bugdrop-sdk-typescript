@@ -41,7 +41,7 @@
     "example:hosted:dry-run": "npm run example:hosted:build && npm --prefix examples/hosted-fixture run dry-run"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.2",
+    "@eslint/js": "10.0.1",
     "@types/node": "22.20.2",
     "@vitest/coverage-v8": "4.1.11",
     "esbuild": "0.28.1",
