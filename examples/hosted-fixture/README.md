@@ -9,6 +9,10 @@ The browser sees only the public Application ID, widget URL, and a session-speci
 
 - The Worker requires one exact configured HTTPS origin and serves only `/`, `/login`,
   `/fixture.js`, and `POST /api/bugdrop-capability/v1`. No proxy or fallback route exists.
+- The staging custom domain is `sdk-fixture-staging.bugdrop.dev`. Its checked-in rollout gate is
+  `FIXTURE_ENABLED = "false"`; every request returns 503 until an operator deliberately enables it
+  after the separate Application and issuer bindings are verified. The gate is checked before
+  origin matching, asset serving, session lookup, or issuer access.
 - Operator sign-in uses a separate password binding. The session cookie is Secure, HttpOnly,
   SameSite=Strict, host-only, and expires after 30 minutes. The Durable Object stores the
   server-side session and CSRF token.
@@ -41,12 +45,17 @@ Wrangler's browser-oriented resolver would select the intentionally empty browse
 `@bugdrop/server`, so `wrangler.toml` explicitly aliases that import to the built server entry.
 The dry run must show no missing-export warning.
 
-Before an operator deploys, confirm that the dedicated fixture hostname and Cloudflare route are
-owned by the staging zone and do not collide with account or managed ingress. Configure these
+Before an operator deploys, confirm that the dedicated fixture hostname is still unclaimed in the
+`bugdrop.dev` Cloudflare zone and does not collide with account or managed ingress. The Wrangler
+custom domain creates DNS and a certificate when deployed; no separate DNS record is needed.
+The first deployment must retain `FIXTURE_ENABLED = "false"` and have no Application key or issuer
+binding. Verify that all paths, including `/fixture.js` and the capability endpoint, return 503
+at the HTTPS hostname before preparing activation. Configure these
 bindings on the Worker without copying secrets into shell history, code, or docs:
 
 | Binding                       | Required value                                                         |
 | ----------------------------- | ---------------------------------------------------------------------- |
+| `FIXTURE_ENABLED`             | `false` for route qualification; `true` only after activation approval |
 | `FIXTURE_ORIGIN`              | Exact canonical HTTPS origin assigned to this Worker                   |
 | `APPLICATION_ID`              | Public ID of a separate fixture Application registered for that origin |
 | `WIDGET_URL`                  | Explicit staging hosted widget HTTPS script URL                        |

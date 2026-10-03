@@ -22,6 +22,7 @@ interface FixtureNamespace {
 }
 
 export interface FixtureEnv {
+  FIXTURE_ENABLED: string;
   FIXTURE_ORIGIN: string;
   APPLICATION_ID: string;
   WIDGET_URL: string;
