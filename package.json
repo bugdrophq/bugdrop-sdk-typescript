@@ -36,7 +36,9 @@
     "test:staging": "npm run build && node scripts/staging.mjs",
     "test:staging:unit": "node --test test/staging/*.test.mjs",
     "validate:dogfood": "npm run validate && npm run test:staging",
-    "example:v1:loopback": "npm run build && node examples/v1-backend/run.mjs"
+    "example:v1:loopback": "npm run build && node examples/v1-backend/run.mjs",
+    "example:hosted:build": "npm run build && esbuild examples/hosted-fixture/client.ts --bundle --format=iife --target=es2022 --outfile=examples/hosted-fixture/public/fixture.js",
+    "example:hosted:dry-run": "npm run example:hosted:build && npm --prefix examples/hosted-fixture run dry-run"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
