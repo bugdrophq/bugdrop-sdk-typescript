@@ -15,7 +15,8 @@
     "test/**/*.ts",
     "vitest.config.ts",
     "examples/opt-in-backend/*.ts",
-    "examples/v1-backend/*.ts"
+    "examples/v1-backend/*.ts",
+    "examples/hosted-fixture/*.ts"
   ],
   "exclude": ["packages/*/dist"]
 }
