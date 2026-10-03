@@ -1,0 +1,14 @@
+{
+  "name": "bugdrop-hosted-fixture-tooling",
+  "version": "0.0.0-development",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dry-run": "wrangler deploy --config wrangler.toml --dry-run --outdir /tmp/bugdrop-hosted-fixture-dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
+}

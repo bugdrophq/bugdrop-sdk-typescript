@@ -38,7 +38,7 @@
     "validate:dogfood": "npm run validate && npm run test:staging",
     "example:v1:loopback": "npm run build && node examples/v1-backend/run.mjs",
     "example:hosted:build": "npm run build && esbuild examples/hosted-fixture/client.ts --bundle --format=iife --target=es2022 --outfile=examples/hosted-fixture/public/fixture.js",
-    "example:hosted:dry-run": "npm run example:hosted:build && wrangler deploy --config examples/hosted-fixture/wrangler.toml --dry-run --outdir /tmp/bugdrop-hosted-fixture-dry-run"
+    "example:hosted:dry-run": "npm run example:hosted:build && npm --prefix examples/hosted-fixture run dry-run"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
@@ -55,7 +55,6 @@
     "typescript-eslint": "8.65.0",
     "vite": "7.3.6",
     "vitest": "4.1.11",
-    "wrangler": "4.147.0",
     "yaml": "2.9.0"
   }
 }

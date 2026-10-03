@@ -27,8 +27,12 @@ The browser sees only the public Application ID, widget URL, and a session-speci
 
 ## Build and qualification
 
-Run `npm ci`, `npm run example:hosted:build`, `npm run example:hosted:dry-run`,
-`npx vitest run test/hosted-fixture.test.ts`, `npm run validate`, and `npm run test:security`.
+Run `npm ci` at the repository root, then `npm run example:hosted:build`,
+`npx vitest run test/hosted-fixture.test.ts`, `npm run validate`, and
+`npm run test:security`. The root workspace supports Node 20 or 22. For the optional
+Wrangler dry run, use Node 22 or newer, run `npm ci --prefix examples/hosted-fixture`,
+then `npm run example:hosted:dry-run` from the repository root. Wrangler is pinned in the
+fixture's private package and lockfile; it is not part of the root workspace install.
 The build produces the browser bundle from the installed workspace package in `public/fixture.js`.
 The Wrangler dry run confirms that the Worker, its Node-compatible server package, static asset,
 and Durable Object bundle; it does not deploy or assign a route.
