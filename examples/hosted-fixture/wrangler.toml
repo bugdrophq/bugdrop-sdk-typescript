@@ -4,6 +4,13 @@ compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 
+[vars]
+FIXTURE_ENABLED = "false"
+
+[[routes]]
+pattern = "sdk-fixture-staging.bugdrop.dev"
+custom_domain = true
+
 [alias]
 "@bugdrop/server" = "../../packages/server/dist/index.js"
 

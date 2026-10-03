@@ -24,6 +24,7 @@ function unavailable(): Response {
 
 function safeConfig(env: FixtureEnv): boolean {
   try {
+    if (env.FIXTURE_ENABLED !== 'true') return false;
     const origin = new URL(env.FIXTURE_ORIGIN);
     const widget = new URL(env.WIDGET_URL);
     const issuer = new URL(env.BUGDROP_CAPABILITY_ENDPOINT);

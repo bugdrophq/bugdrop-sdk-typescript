@@ -42,6 +42,7 @@ function fixture() {
   const state = new FixtureState({ storage });
   const stub = { fetch: (request: Request) => state.fetch(request) };
   const env: FixtureEnv = {
+    FIXTURE_ENABLED: 'true',
     FIXTURE_ORIGIN: ORIGIN,
     APPLICATION_ID: 'app_fixture',
     WIDGET_URL: 'https://widget.bugdrop.dev/widget.v1.js',
@@ -115,6 +116,16 @@ function capability(
 afterEach(() => vi.unstubAllGlobals());
 
 describe('hosted fixture', () => {
+  it('stays unavailable when the rollout gate is off, even with otherwise valid bindings', async () => {
+    const { env } = fixture();
+    env.FIXTURE_ENABLED = 'false';
+    const issuer = vi.fn();
+    vi.stubGlobal('fetch', issuer);
+    expect((await worker.fetch(new Request(ORIGIN), env)).status).toBe(503);
+    expect((await capability(env)).status).toBe(503);
+    expect(issuer).not.toHaveBeenCalled();
+  });
+
   it('fails closed with absent issuer configuration and never authenticates', async () => {
     const { env } = fixture();
     env.BUGDROP_CAPABILITY_ENDPOINT = '';
