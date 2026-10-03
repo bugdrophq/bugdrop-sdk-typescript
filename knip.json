@@ -1,10 +1,9 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
       "entry": [
         "scripts/*.mjs",
-        "vitest.config.ts",
         "test/staging/*.test.mjs",
         "scripts/staging/worker.mjs",
         "scripts/staging/observer.mjs",
@@ -14,7 +13,6 @@
         "examples/v1-backend/transport.ts",
         "examples/v1-backend/loopback-server.ts",
         "examples/v1-backend/loopback-browser.ts",
-        "examples/v1-backend/run.mjs",
         "examples/hosted-fixture/worker.ts"
       ],
       "project": [
@@ -25,8 +23,7 @@
         "examples/opt-in-backend/*.ts",
         "examples/v1-backend/*.ts",
         "examples/hosted-fixture/*.ts"
-      ],
-      "ignoreDependencies": ["@bugdrop/server", "@bugdrop/browser"]
+      ]
     },
     "packages/browser": {
       "entry": ["src/index.ts", "src/opt-in.ts"],
