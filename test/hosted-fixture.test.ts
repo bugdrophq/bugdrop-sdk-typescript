@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../examples/hosted-fixture/worker.js';
 import { FixtureState } from '../examples/hosted-fixture/state.js';
-import type { FixtureEnv, FixtureStorage } from '../examples/hosted-fixture/types.js';
+import type {
+  FixtureEnv,
+  FixtureExecutionContext,
+  FixtureStorage,
+} from '../examples/hosted-fixture/types.js';
 
 const ORIGIN = 'https://sdk-fixture.example';
 const DIGEST = Buffer.alloc(32, 1).toString('base64url');
@@ -86,7 +90,8 @@ function capability(
     origin?: string;
     id?: string;
     digest?: string;
-  } = {}
+  } = {},
+  context?: FixtureExecutionContext
 ) {
   return worker.fetch(
     new Request(`${ORIGIN}/api/bugdrop-capability/v1`, {
@@ -102,7 +107,8 @@ function capability(
         payloadDigest: options.digest ?? DIGEST,
       }),
     }),
-    env
+    env,
+    context
   );
 }
 
@@ -174,7 +180,64 @@ describe('hosted fixture', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.text()).toBe('{"error":"unable_to_authorize_bugdrop"}');
   });
+});
 
+describe('hosted fixture lease cleanup', () => {
+  it('returns an issued capability while lease cleanup is still pending', async () => {
+    const { env, storage } = fixture();
+    const active = await login(env);
+    const originalStub = env.FIXTURE_STATE.get('global-v1');
+    let releaseFinish!: () => void;
+    let notifyFinish!: () => void;
+    const finishBlocked = new Promise<void>((resolve) => {
+      releaseFinish = resolve;
+    });
+    const finishStarted = new Promise<void>((resolve) => {
+      notifyFinish = resolve;
+    });
+    env.FIXTURE_STATE = {
+      idFromName: (name) => name,
+      get: () => ({
+        fetch: async (request) => {
+          if (new URL(request.url).pathname === '/finish') {
+            notifyFinish();
+            await finishBlocked;
+          }
+          return originalStub.fetch(request);
+        },
+      }),
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          schemaVersion: 1,
+          token: 'opaque-capability',
+          expiresAt: new Date(Date.now() + 240_000).toISOString(),
+        })
+      )
+    );
+    const lifetime: Promise<unknown>[] = [];
+    let delivered: Response | undefined;
+    const response = capability(env, active, { waitUntil: (promise) => lifetime.push(promise) });
+    void response.then((value) => {
+      delivered = value;
+    });
+    try {
+      await finishStarted;
+      await vi.waitFor(() => expect(delivered?.status).toBe(200));
+      expect(lifetime).toHaveLength(1);
+    } finally {
+      releaseFinish();
+      await response;
+      await Promise.all(lifetime);
+    }
+    const id = active.cookie.split('=')[1]!;
+    expect(storage.values.get(`session:${id}`)).not.toHaveProperty('active');
+  });
+});
+
+describe('hosted fixture rate limits', () => {
   it('rate limits operator attempts and authorized capability exchanges', async () => {
     const { env } = fixture();
     const badLogin = () =>

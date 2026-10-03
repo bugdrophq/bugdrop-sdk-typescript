@@ -12,6 +12,10 @@ export interface FixtureStub {
   fetch(request: Request): Promise<Response>;
 }
 
+export interface FixtureExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
 interface FixtureNamespace {
   idFromName(name: string): unknown;
   get(id: unknown): FixtureStub;

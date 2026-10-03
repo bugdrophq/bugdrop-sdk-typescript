@@ -1,6 +1,6 @@
 import { createV1Handler } from '../v1-backend/handler.js';
 import { FixtureState } from './state.js';
-import type { FixtureEnv, FixtureStub } from './types.js';
+import type { FixtureEnv, FixtureExecutionContext, FixtureStub } from './types.js';
 
 export { FixtureState };
 
@@ -182,7 +182,8 @@ async function capability(
   request: Request,
   env: FixtureEnv,
   stub: FixtureStub,
-  id: string | null
+  id: string | null,
+  context?: FixtureExecutionContext
 ): Promise<Response> {
   if (!id) return denied();
   let lease: string | null = null;
@@ -222,19 +223,26 @@ async function capability(
   } catch {
     return denied();
   } finally {
-    if (lease) await callState(stub, '/finish', { sessionId: id, lease });
+    if (lease) {
+      const cleanup = callState(stub, '/finish', { sessionId: id, lease });
+      context?.waitUntil(cleanup);
+    }
   }
 }
 
 export default {
-  async fetch(request: Request, env: FixtureEnv): Promise<Response> {
+  async fetch(
+    request: Request,
+    env: FixtureEnv,
+    context?: FixtureExecutionContext
+  ): Promise<Response> {
     if (!safeConfig(env)) return unavailable();
     const url = new URL(request.url);
     if (url.origin !== env.FIXTURE_ORIGIN || url.search || url.hash) return denied();
     const stub = env.FIXTURE_STATE.get(env.FIXTURE_STATE.idFromName('global-v1'));
     const id = sessionId(request.headers.get('Cookie'));
     if (request.method === 'POST' && url.pathname === ROUTE) {
-      return capability(request, env, stub, id);
+      return capability(request, env, stub, id, context);
     }
     if (request.method === 'POST' && url.pathname === '/login') {
       if (request.headers.get('Origin') !== env.FIXTURE_ORIGIN) return denied();

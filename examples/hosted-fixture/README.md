@@ -19,7 +19,8 @@ The browser sees only the public Application ID, widget URL, and a session-speci
   Durable Object storage is deliberately retired.
 - The policy permits at most eight authorized requests per session per minute and one active
   exchange per session. A lease expires after nine seconds if the Worker dies. The issuer
-  timeout is five seconds and the entire route has an eight-second deadline. Denials are
+  timeout is five seconds and the capability response has an eight-second deadline. Lease
+  cleanup runs through the Worker execution context after the response is ready. Denials are
   redacted, no-store, and never fall back to a local token. Operator sign-in is also limited to
   eight attempts per minute across this staging fixture.
 - The API key, operator password, origin, issuer endpoint, Application ID, and widget URL are
