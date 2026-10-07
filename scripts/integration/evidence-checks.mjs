@@ -7,6 +7,7 @@ export function assertPrivateEvidence(
   sdkVersion,
   expectedSubmissions
 ) {
+  const capabilities = Array.isArray(capability) ? capability : [capability];
   const serialized = JSON.stringify(evidence);
   const credential = fixtures['api-key-credential'];
   for (const canary of [
@@ -14,7 +15,7 @@ export function assertPrivateEvidence(
     credential.rootSecret,
     credential.authorization,
     credential.authSecret,
-    capability.token,
+    ...capabilities.map(({ token }) => token),
     fixtures['submission-binding'].requestBody,
     fixtures['submission-binding'].bound.submissionId,
     'Save failed',
@@ -28,7 +29,7 @@ export function assertPrivateEvidence(
   assert.ok(Array.isArray(submissionResponses), 'Missing actual submission response observations');
   assert.equal(
     evidenceRequests.length,
-    1,
+    capabilities.length,
     'Missing or unexpected capability exchange observations'
   );
   assert.ok(Number.isInteger(expectedSubmissions) && expectedSubmissions > 0);

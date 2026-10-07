@@ -58,11 +58,22 @@ export async function checkService(consumer, fixtures, start) {
     );
     assert.equal(token, capability.token);
     assertOutcome(await submit(service, capability), 'delivered');
-    assertOutcome(await submit(service, capability), 'delivered');
+    assertOutcome(await submit(service, capability), 'rejected');
+    const replacements = [await authorize(service, client), await authorize(service, client)];
+    const capabilities = [capability, ...replacements];
+    assert.equal(new Set(capabilities.map(({ token }) => token)).size, 3, 'Remint reused a token');
+    const duplicateResults = await Promise.allSettled(
+      replacements.map(async (fresh) => {
+        assertOutcome(await submit(service, fresh), 'delivered');
+      })
+    );
+    for (const result of duplicateResults) assert.equal(result.status, 'fulfilled');
+    for (const replacement of replacements)
+      assertOutcome(await submit(service, replacement), 'rejected');
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Replay caused a second delivery attempt');
-    assert.deepEqual(evidence.sdkVersions, [consumer.versions.server]);
-    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server, 2);
+    assert.deepEqual(evidence.sdkVersions, Array(3).fill(consumer.versions.server));
+    assertPrivateEvidence(evidence, fixtures, capabilities, consumer.versions.server, 6);
   });
   await scenario(async (service, client) => {
     const wrongOrigin =
@@ -132,9 +143,20 @@ export async function checkService(consumer, fixtures, start) {
     await service.setDeliveryIndeterminate();
     const capability = await authorize(service, client);
     assertOutcome(await submit(service, capability), 'indeterminate');
-    assertOutcome(await submit(service, capability), 'indeterminate');
+    assertOutcome(await submit(service, capability), 'rejected');
+    const replacements = [await authorize(service, client), await authorize(service, client)];
+    const capabilities = [capability, ...replacements];
+    assert.equal(new Set(capabilities.map(({ token }) => token)).size, 3, 'Remint reused a token');
+    const duplicateResults = await Promise.allSettled(
+      replacements.map(async (fresh) => {
+        assertOutcome(await submit(service, fresh), 'indeterminate');
+      })
+    );
+    for (const result of duplicateResults) assert.equal(result.status, 'fulfilled');
+    for (const replacement of replacements)
+      assertOutcome(await submit(service, replacement), 'rejected');
     const evidence = await service.evidence();
     assert.equal(evidence.attempts, 1, 'Indeterminate outcome retried delivery');
-    assertPrivateEvidence(evidence, fixtures, capability, consumer.versions.server, 2);
+    assertPrivateEvidence(evidence, fixtures, capabilities, consumer.versions.server, 6);
   });
 }

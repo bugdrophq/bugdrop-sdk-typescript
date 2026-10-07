@@ -35,7 +35,14 @@ this adapter is not a published submission HTTP route. No service wire fields ar
 
 Each failure scenario starts a fresh local service. Tests require exact normalized outcome objects,
 verify changed-body and submission-ID rejection, tampered-capability rejection, revoked/stale
-projection rejection, and at most one delivery attempt after replay or an indeterminate result.
+projection rejection, and exactly one delivery attempt in each delivered/indeterminate scenario.
+Those scenarios reject a repeat of the consumed token, mint two distinct replacement tokens for
+the same submission ID/body, and submit the replacements concurrently. Both return the retained
+outcome. Replaying each replacement must then be rejected, proving that receipt reuse also consumes
+tokens. Each scenario therefore requires three successful exchanges and six submissions. Every
+minted token is checked as a private canary; reusing a minted token fails before further submits.
+SDK-owned adversarial doubles verify that repeated tokens, second delivery attempts, replay success,
+replacement-token replay success, and replacement-token leaks fail both harnesses. These doubles do not prove the external service.
 Evidence is checked for report, credential, token, and identity canaries. Test-owned observations
 of actual telemetry requests must contain only the SDK version, fixed transport headers, and explicit
 false unexpected-header/URL markers. The observations must match the exact expected counts; raw

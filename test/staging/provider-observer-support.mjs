@@ -71,7 +71,7 @@ export async function providerObserverFixture(target, expectedDigest) {
     response.end(
       JSON.stringify({
         schemaVersion: 1,
-        token: 'local-capability-canary',
+        token: `local-capability-canary-${record.networkRequests}`,
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
       })
     );
@@ -97,6 +97,8 @@ export async function providerObserverFixture(target, expectedDigest) {
       preAdmission503: false,
       closed: false,
       outcomes: [],
+      consumed: new Set(),
+      attempts: 0,
       evidenceReads: 0,
     };
     record.expectedBearer = credentialCanaries(record.apiKey).at(-1);
@@ -112,8 +114,14 @@ export async function providerObserverFixture(target, expectedDigest) {
       endpoint,
       origin: target.origin,
       resolveApiKey: async () => record.apiKey,
-      async submit() {
-        const outcome = ['delivered', 'indeterminate'].includes(scenario) ? scenario : 'rejected';
+      async submit({ capability }) {
+        const eligible = ['delivered', 'indeterminate'].includes(scenario);
+        const used = record.consumed.has(capability.token);
+        const outcome = eligible && !used ? scenario : 'rejected';
+        if (eligible && !used) {
+          record.consumed.add(capability.token);
+          if (!record.attempts) record.attempts++;
+        }
         record.outcomes.push(outcome);
         return { schemaVersion: 1, outcome };
       },
@@ -128,7 +136,11 @@ export async function providerObserverFixture(target, expectedDigest) {
         assert.equal(sdkAttemptTranscript?.scenario, scenario);
         record.evidenceReads++;
         const observation = await observer.lease.read();
-        return { exchanges: observation.exchanges, outcomes: [...record.outcomes] };
+        return {
+          exchanges: observation.exchanges,
+          outcomes: [...record.outcomes],
+          attempts: record.attempts,
+        };
       },
       async close() {
         try {

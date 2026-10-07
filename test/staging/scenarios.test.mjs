@@ -12,6 +12,12 @@ function testDouble({
   denialStatus = 403,
   denialCode = 'request_failed',
   failBaseline = false,
+  faultScenario = 'delivered',
+  duplicateToken = false,
+  duplicateAttempt = false,
+  replaySuccess = false,
+  replacementReplaySuccess = false,
+  leakReplacement = false,
 } = {}) {
   let state;
   const closed = [];
@@ -19,14 +25,30 @@ function testDouble({
   const exchanges = [];
   const provider = {
     async startScenario({ name, submissionId }) {
-      state = { name, submissionId, exchanges: 0, outcomes: [], blocked: false };
+      state = {
+        name,
+        submissionId,
+        exchanges: 0,
+        outcomes: [],
+        blocked: false,
+        consumed: new Set(),
+        attempts: 0,
+      };
       return {
         endpoint: target.endpoint,
         origin: target.origin,
         // Intentionally invalid for the real SDK: this tests orchestration, never remote proof.
         resolveApiKey: async () => 'bd_api_v1.test.test',
-        submit: async () => {
-          const outcome = ['delivered', 'indeterminate'].includes(name) ? name : 'rejected';
+        submit: async ({ capability }) => {
+          const eligible = ['delivered', 'indeterminate'].includes(name);
+          const used = state.consumed.has(capability.token);
+          const poisoned = name === faultScenario;
+          const outcome = eligible && (!used || (poisoned && replaySuccess)) ? name : 'rejected';
+          if (eligible && !used) {
+            if (!(poisoned && replacementReplaySuccess && state.attempts > 0))
+              state.consumed.add(capability.token);
+            if (!state.attempts || (poisoned && duplicateAttempt)) state.attempts++;
+          }
           state.outcomes.push(outcome);
           return { schemaVersion: 1, outcome };
         },
@@ -37,7 +59,14 @@ function testDouble({
           state.blocked = true;
         },
         setDeliveryIndeterminate() {},
-        evidence: async () => ({ exchanges: state.observations, outcomes: state.outcomes }),
+        evidence: async () => ({
+          exchanges: state.observations,
+          outcomes: state.outcomes,
+          attempts: state.attempts,
+          ...(leakReplacement && name === faultScenario
+            ? { leaked: 'test-only-capability-2' }
+            : {}),
+        }),
         close: async () => {
           closed.push(name);
         },
@@ -72,7 +101,7 @@ function testDouble({
       }
       return {
         schemaVersion: 1,
-        token: 'test-only-capability',
+        token: `test-only-capability-${duplicateToken && state.name === faultScenario ? 1 : state.exchanges}`,
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
       };
     }
@@ -82,10 +111,22 @@ function testDouble({
       assert.equal(evidence.exchanges.length, expected.exchangeCount);
       const successes = ['origin', 'revoked', 'stale'].includes(expected.scenario)
         ? [true, false]
-        : [true];
+        : ['delivered', 'indeterminate'].includes(expected.scenario)
+          ? [true, true, true]
+          : [true];
       assert.deepEqual(expected.exchangeSuccesses, successes);
       assert.equal(expected.exchangeCount, successes.length);
       assert.deepEqual(evidence.outcomes, expected.submissionOutcomes);
+      if (['delivered', 'indeterminate'].includes(expected.scenario))
+        assert.deepEqual(expected.submissionOutcomes, [
+          expected.scenario,
+          'rejected',
+          expected.scenario,
+          expected.scenario,
+          'rejected',
+          'rejected',
+        ]);
+      assert.equal(evidence.attempts, expected.attempts);
       assert.equal(expected.serviceRevision, target.serviceRevision);
       assert.equal(expected.deploymentDigest, target.deploymentDigest);
       assert.equal(expected.repositoryId, target.repositoryId);
@@ -165,5 +206,22 @@ test('only an explicit request_failed HTTP 403 proves issuance denial', async ()
     await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
     assert.equal(fixture.observed.includes(failureScenario), false);
     assert.equal(fixture.closed.at(-1), failureScenario);
+  }
+});
+
+test('replay conformance rejects repeated mint tokens, second attempts, replay successes and replacement leaks', async () => {
+  for (const faultScenario of ['delivered', 'indeterminate']) {
+    for (const fault of [
+      'duplicateToken',
+      'duplicateAttempt',
+      'replaySuccess',
+      'replacementReplaySuccess',
+      'leakReplacement',
+    ]) {
+      const fixture = testDouble({ [fault]: true, faultScenario });
+      await assert.rejects(runScenarios({ ...fixture, fixtures, target }));
+      assert.equal(fixture.observed.includes(faultScenario), false);
+      assert.equal(fixture.closed.at(-1), faultScenario);
+    }
   }
 });
