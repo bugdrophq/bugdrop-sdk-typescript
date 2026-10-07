@@ -157,6 +157,17 @@ submission binding, and exact request-body bytes, and exposes content-free evide
 revocation/failure controls. The adapter is coordinated with the service owner; it does not define
 or imply a published managed-submission HTTP route or change the six V1 wire fixtures.
 
+The coordinated managed V1 receipt contract distinguishes token replay from logical submission
+reuse: an already-consumed valid token must receive `replay_detected`; a newly minted token for the
+same submission ID and payload may return its retained delivered or indeterminate receipt without
+another delivery attempt. The local and staging test adapters normalize same-token rejection as
+`{ schemaVersion: 1, outcome: "rejected" }`. This is their test envelope, not a public submission
+response. These harnesses now require three distinct minted tokens, reject reuse of the original,
+and concurrently submit the two replacements. Both replacements must retain the original outcome;
+each replacement is then replayed and must be rejected too. All six submissions together must cause
+exactly one delivery attempt. This is conformance testing,
+not an SDK retry feature or permission to retry an ambiguous GitHub operation.
+
 The independent service run proves local issuer/verifier/receipt interoperability with fake GitHub
 delivery. The SDK-only transport fixture and browser controller double do not satisfy that proof or
 the real hosted-widget publication gate. The tested service revision and result belong in the

@@ -53,6 +53,7 @@ test('packed SDK and signed observer reconcile all seven provider scenarios exac
             expected.exchangeSuccesses
           );
           assert.deepEqual(evidence.outcomes, expected.submissionOutcomes);
+          assert.equal(evidence.attempts, expected.attempts);
           attested.push(expected.scenario);
           return true;
         },

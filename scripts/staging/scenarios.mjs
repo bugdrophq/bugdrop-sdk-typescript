@@ -77,7 +77,18 @@ export async function runScenarios({
         const capability = await authorize();
         if (name === 'delivered' || name === 'indeterminate') {
           await submit(capability, name);
-          await submit(capability, name);
+          await submit(capability, 'rejected');
+          const replacements = [await authorize(), await authorize()];
+          assert.equal(
+            new Set([capability, ...replacements].map(({ token }) => token)).size,
+            3,
+            'Remint reused a token'
+          );
+          const duplicateResults = await Promise.allSettled(
+            replacements.map((fresh) => submit(fresh, name))
+          );
+          for (const result of duplicateResults) assert.equal(result.status, 'fulfilled');
+          for (const replacement of replacements) await submit(replacement, 'rejected');
         } else if (name === 'tampered') {
           await submit({ ...capability, token: capability.token + 'tampered' }, 'rejected');
         } else if (name === 'binding') {

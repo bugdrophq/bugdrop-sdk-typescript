@@ -105,7 +105,14 @@ and transport errors cannot stand in for that denial. The oracle must enforce su
 explicit 403 observations against this array.
 
 Scenarios require delivery/replay, exact-origin rejection, tampered tokens, every negative V1
-submission-binding vector, revocation, stale authorization, and indeterminate replay with one attempt.
+submission-binding vector, revocation, stale authorization, and indeterminate receipt reuse with one
+attempt. Delivered and indeterminate scenarios each require three distinct capabilities and six
+submissions: original outcome, rejection of the consumed token, then the retained outcome for each
+of two concurrently submitted replacement tokens bound to the same submission ID/body, followed by
+rejection of each replacement token replay. Their
+`exchangeSuccesses` is `[true, true, true]`; all issued tokens enter the evidence canary check. The
+`outcome` envelope is test-only normalization; it does not change the public submission response.
+These probes verify receipt reuse and must never cause another GitHub delivery attempt.
 Capability validation and SDK-version reporting run through the installed server export. Existing
 packed browser/ESM/CommonJS checks remain in normal CI; no real hosted-widget proof is claimed here.
 
