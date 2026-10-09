@@ -37,12 +37,13 @@ interface HostedWidgetApi {
   setTheme(mode: BugDropTheme): void;
 }
 
-declare global {
-  interface Window {
-    BugDrop?: HostedWidgetApi;
+// Keep loader internals local: applications may declare their own direct-widget API.
+function widgetWindow() {
+  return window as unknown as {
+    BugDrop?: unknown;
     [key: `__bugdropSdkTokenProvider_${string}`]:
       ((binding: SubmissionBinding) => Promise<string>) | undefined;
-  }
+  };
 }
 
 let providerSequence = 0;
@@ -106,7 +107,7 @@ export function initialize(
     return activeController;
   }
   if (
-    window.BugDrop ||
+    widgetWindow().BugDrop ||
     Array.from(document.scripts).some(
       (script) =>
         script.dataset.repo !== undefined || script.dataset.authTokenProvider !== undefined
@@ -139,7 +140,7 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
   const timeoutMs = options.loadTimeoutMs ?? DEFAULT_LOAD_TIMEOUT_MS;
 
   let providerActive = true;
-  window[providerName] = async (binding: SubmissionBinding) => {
+  widgetWindow()[providerName] = async (binding: SubmissionBinding) => {
     let capability: SubmissionCapability;
     try {
       if (!providerActive) throw new Error();
@@ -181,14 +182,14 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
       settled = true;
       cleanupListeners();
       providerActive = false;
-      delete window[providerName];
+      delete widgetWindow()[providerName];
       script.remove();
       reject(new Error(message));
     };
 
     const finish = () => {
       if (settled) return;
-      const api = window.BugDrop;
+      const api = widgetWindow().BugDrop;
       if (!isHostedWidgetApi(api)) {
         fail('The hosted BugDrop widget did not expose a compatible API');
         return;

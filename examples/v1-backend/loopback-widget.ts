@@ -63,7 +63,7 @@ export function installLocalWidget(script: HTMLScriptElement): void {
       window.dispatchEvent(new CustomEvent('bugdrop:local-result', { detail: { ok } }));
     }
   };
-  window.BugDrop = {
+  (window as unknown as { BugDrop: unknown }).BugDrop = {
     open: () => void exchange(),
     close: () => {},
     hide: () => {},
