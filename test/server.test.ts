@@ -16,6 +16,16 @@ const binding = {
 };
 
 describe('@bugdrop/server', () => {
+  it('calls the Fetch API without binding the SDK instance as its receiver', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(function (this: unknown) {
+      expect(this).toBeUndefined();
+      return Promise.resolve(Response.json(response));
+    });
+    const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
+    await expect(client.createSubmissionToken(binding)).resolves.toEqual(response);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it('creates an application-scoped token without an end-user identifier', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(Response.json(response));
     const client = new BugDrop({ apiKey: fixture.apiKey, fetch });
@@ -35,7 +45,7 @@ describe('@bugdrop/server', () => {
     });
     expect(JSON.stringify({ url, init })).not.toContain(fixture.apiKey);
     expect(JSON.stringify({ url, init })).not.toContain(fixture.rootSecret);
-    expect(init?.redirect).toBe('error');
+    expect(init?.redirect).toBe('manual');
   });
 
   it('sends optional Application context without adding user identity', async () => {

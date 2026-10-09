@@ -115,7 +115,7 @@ describe('V1 customer backend boundary', () => {
     });
     expect(new Headers(init?.headers).get('Authorization')).toBe(credential.authorization);
     expect(JSON.stringify(init)).not.toContain('private-canary');
-    expect(init?.redirect).toBe('error');
+    expect(init?.redirect).toBe('manual');
   });
 
   it.each([false, undefined, 'true', 1])('fails closed for policy result %#', async (answer) => {

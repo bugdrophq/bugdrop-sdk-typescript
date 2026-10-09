@@ -80,3 +80,9 @@ preserve their `Origin` header, which the login handler requires. `no-referrer` 
 Chromium send `Origin: null` for this navigation and prevents the operator from signing
 in. Cross-origin requests still receive no referrer; absent, null, and foreign login
 origins remain rejected.
+
+The V1 server client's outbound capability request uses `redirect: 'manual'`. Workers rejects
+`'error'` before network access; manual mode works in both Workers and Node. The client rejects
+redirect responses without following `Location`, forwarding the derived bearer, or retrying.
+It invokes the Fetch API as a function, preserving compatibility with runtimes that reject an SDK
+instance as the native function's receiver.

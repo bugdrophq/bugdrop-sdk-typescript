@@ -48,30 +48,33 @@ describe('Stage 0 managed exchange boundary', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('blocks an actual HTTP redirect before leaking the derived bearer or retrying', async () => {
-    const paths: string[] = [];
-    const server = createServer((request, response) => {
-      paths.push(request.url!);
-      response.writeHead(307, { Location: '/anonymous-public' }).end();
-    });
-    server.listen(0, '127.0.0.1');
-    await once(server, 'listening');
-    const address = server.address();
-    if (!address || typeof address === 'string') throw new Error('Missing local address');
-    try {
-      const client = new BugDrop({
-        apiKey: credential.apiKey,
-        endpoint: `http://127.0.0.1:${address.port}/managed`,
+  it.each([301, 302, 303, 307, 308])(
+    'blocks HTTP %s before leaking the derived bearer or retrying',
+    async (status) => {
+      const paths: string[] = [];
+      const server = createServer((request, response) => {
+        paths.push(request.url!);
+        response.writeHead(status, { Location: '/anonymous-public' }).end();
       });
-      await expect(client.createSubmissionToken(binding.bound)).rejects.toMatchObject({
-        code: 'request_failed',
-      });
-      expect(paths).toEqual(['/managed']);
-    } finally {
-      server.closeAllConnections();
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      );
+      server.listen(0, '127.0.0.1');
+      await once(server, 'listening');
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing local address');
+      try {
+        const client = new BugDrop({
+          apiKey: credential.apiKey,
+          endpoint: `http://127.0.0.1:${address.port}/managed`,
+        });
+        await expect(client.createSubmissionToken(binding.bound)).rejects.toMatchObject({
+          code: 'request_failed',
+        });
+        expect(paths).toEqual(['/managed']);
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve()))
+        );
+      }
     }
-  });
+  );
 });
