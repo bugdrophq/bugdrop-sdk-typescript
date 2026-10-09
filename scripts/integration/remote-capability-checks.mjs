@@ -88,7 +88,7 @@ export async function checkRemoteCapabilityProvider(consumer, fixtures) {
   const request = requests[0];
   assert.equal(request.url, endpoint);
   assert.equal(request.init.method, 'POST');
-  assert.equal(request.init.redirect, 'error');
+  assert.equal(request.init.redirect, 'manual');
   assert.equal(request.init.headers.Authorization, credentialCanaries(apiKey).at(-1));
   assert.equal(
     request.init.headers.Accept,

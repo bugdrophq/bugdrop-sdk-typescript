@@ -86,7 +86,8 @@ export class BugDrop {
 
     let response: Response;
     try {
-      response = await this.#fetch(this.#endpoint, {
+      const transport = this.#fetch;
+      response = await transport(this.#endpoint, {
         method: 'POST',
         headers: {
           Accept: BUGDROP_CAPABILITY_MEDIA_TYPE,
@@ -96,7 +97,7 @@ export class BugDrop {
           ...authenticationHeaders,
         },
         body,
-        redirect: 'error',
+        redirect: 'manual',
         signal,
       });
     } catch {
