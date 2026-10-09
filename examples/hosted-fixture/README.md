@@ -72,3 +72,11 @@ missing/wrong CSRF, cross-session ID reuse, changed digest, concurrent requests,
 upstream outage, and successful hosted capability before allowing any real submission. A
 successful local or dry-run test is not staging acceptance evidence. Record the staging issuer
 response and hosted widget behavior without copying tokens or request bodies to logs.
+
+## Browser form origin
+
+The fixture page uses `Referrer-Policy: same-origin`. Native same-origin form posts then
+preserve their `Origin` header, which the login handler requires. `no-referrer` makes
+Chromium send `Origin: null` for this navigation and prevents the operator from signing
+in. Cross-origin requests still receive no referrer; absent, null, and foreign login
+origins remain rejected.
