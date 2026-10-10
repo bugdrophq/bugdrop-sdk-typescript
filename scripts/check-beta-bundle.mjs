@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -10,6 +10,25 @@ import { build } from 'esbuild';
 if (!process.argv[2]) throw new Error('Pass the beta bundle directory');
 const source = resolve(process.argv[2]);
 const manifest = JSON.parse(await readFile(join(source, 'provenance.json'), 'utf8'));
+assert.equal(manifest.schemaVersion, 1);
+assert.match(manifest.sourceCommit, /^[a-f0-9]{40}$/);
+const files = Object.keys(manifest.sha256);
+const required = [
+  'package.json',
+  'package-lock.json',
+  'tsconfig.json',
+  'README.md',
+  ...['browser', 'server', 'handler', 'transport'].map((name) => `src/${name}.ts`),
+];
+assert.equal(files.length, required.length + 2, 'Incomplete artifact manifest');
+for (const file of required) assert.ok(files.includes(file), `Missing artifact: ${file}`);
+for (const name of ['browser', 'server']) {
+  assert.equal(
+    files.filter((file) => file.startsWith(`vendor/bugdrop-${name}-`) && file.endsWith('.tgz'))
+      .length,
+    1
+  );
+}
 for (const [file, expected] of Object.entries(manifest.sha256)) {
   assert.match(
     file,
@@ -23,7 +42,9 @@ for (const [file, expected] of Object.entries(manifest.sha256)) {
 const directory = await mkdtemp(join(tmpdir(), 'bugdrop-beta-check-'));
 const run = (args) => execFileSync('npm', args, { cwd: directory, stdio: 'pipe' });
 try {
-  await cp(source, directory, { recursive: true });
+  await mkdir(join(directory, 'src'));
+  await mkdir(join(directory, 'vendor'));
+  for (const file of files) await cp(join(source, file), join(directory, file));
   run(['ci', '--ignore-scripts', '--no-audit', '--no-fund']);
   run(['run', 'build']);
   const browser = await readFile(join(directory, 'dist/browser.js'), 'utf8');
