@@ -61,3 +61,10 @@ No command in this repository publishes or deploys packages. See [architecture](
 [protocol](docs/protocol.md), [security contract](docs/security.md), and the
 [Next.js](docs/examples/nextjs-route.md) and [Express](docs/examples/express-route.md) endpoint
 examples for details.
+
+## Private V1 beta bundle
+
+Use the [portable consumer guide](docs/beta-consumer.md) to produce a commit-identified bundle of
+both packed packages, a relative-path lockfile, and TypeScript browser/server entrypoints using
+the existing V1 helpers. `npm run beta:bundle` requires clean committed source and performs no
+publication or deployment. Hosted fresh-user acceptance remains a separate operator-owned gate.

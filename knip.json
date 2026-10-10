@@ -13,7 +13,9 @@
         "examples/v1-backend/transport.ts",
         "examples/v1-backend/loopback-server.ts",
         "examples/v1-backend/loopback-browser.ts",
-        "examples/hosted-fixture/worker.ts"
+        "examples/hosted-fixture/worker.ts",
+        "examples/beta-consumer/browser.ts",
+        "examples/beta-consumer/server.ts"
       ],
       "project": [
         "scripts/**/*.mjs",
@@ -22,7 +24,8 @@
         "test/staging/**/*.mjs",
         "examples/opt-in-backend/*.ts",
         "examples/v1-backend/*.ts",
-        "examples/hosted-fixture/*.ts"
+        "examples/hosted-fixture/*.ts",
+        "examples/beta-consumer/*.ts"
       ]
     },
     "packages/browser": {
