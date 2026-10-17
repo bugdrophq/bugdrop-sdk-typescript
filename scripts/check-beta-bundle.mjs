@@ -11,6 +11,8 @@ if (!process.argv[2]) throw new Error('Pass the beta bundle directory');
 const source = resolve(process.argv[2]);
 const manifest = JSON.parse(await readFile(join(source, 'provenance.json'), 'utf8'));
 assert.equal(manifest.schemaVersion, 1);
+assert.ok([undefined, 'anonymous', 'authenticated'].includes(manifest.consumerMode));
+const anonymous = manifest.consumerMode === 'anonymous';
 assert.match(manifest.sourceCommit, /^[a-f0-9]{40}$/);
 const files = Object.keys(manifest.sha256);
 const required = [
@@ -86,21 +88,27 @@ try {
     });
   };
   try {
+    const policy = (_request, binding) =>
+      allowed &&
+      binding.submissionId === bound.submissionId &&
+      binding.payloadDigest === bound.payloadDigest;
     const handle = capabilityEndpoint(
       {
+        enabled: true,
         apiKey: credential.apiKey,
         origin: 'https://customer.example',
         endpoint: 'https://issuer.example/v1/submission-capabilities',
       },
-      (_request, binding) =>
-        allowed &&
-        binding.submissionId === bound.submissionId &&
-        binding.payloadDigest === bound.payloadDigest
+      anonymous ? (binding) => Promise.resolve(policy(null, binding)) : policy
     );
     const request = (binding = bound, origin = 'https://customer.example') =>
       new Request('https://customer.example/api/bugdrop-capability/v1', {
         method: 'POST',
-        headers: { Origin: origin, 'Content-Type': 'application/json' },
+        headers: {
+          Origin: origin,
+          'Content-Type': 'application/json',
+          'Sec-Fetch-Site': 'same-origin',
+        },
         body: JSON.stringify(binding),
       });
     assert.equal((await handle(request())).status, 502);

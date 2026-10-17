@@ -112,6 +112,7 @@ await writeFile(
     {
       schemaVersion: 1,
       sourceCommit,
+      consumerMode: anonymous ? 'anonymous' : 'authenticated',
       node: process.version,
       npm: run('npm', ['--version']).trim(),
       sha256: hashes,
