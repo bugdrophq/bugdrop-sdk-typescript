@@ -9,6 +9,15 @@ const DEADLINE_MS = 8000;
 export function createV1TokenProvider(csrfToken: () => string): SubmissionTokenProvider {
   if (typeof csrfToken !== 'function')
     throw new TypeError('A customer CSRF token source is required');
+  return createTokenProvider(csrfToken);
+}
+
+/** Anonymous sites use no session cookie or CSRF token. The server still enforces origin and durable admission. */
+export function createAnonymousTokenProvider(): SubmissionTokenProvider {
+  return createTokenProvider();
+}
+
+function createTokenProvider(csrfToken?: () => string): SubmissionTokenProvider {
   return async (binding) => {
     try {
       const origin = globalThis.location.origin;
@@ -32,8 +41,9 @@ export function createV1TokenProvider(csrfToken: () => string): SubmissionTokenP
       ) {
         throw new Error();
       }
-      const token = csrfToken();
-      if (typeof token !== 'string' || !/^[\x21-\x7e]{1,256}$/.test(token)) throw new Error();
+      const token = csrfToken?.();
+      if (csrfToken && (typeof token !== 'string' || !/^[\x21-\x7e]{1,256}$/.test(token)))
+        throw new Error();
       const body = JSON.stringify(binding);
       if (new TextEncoder().encode(body).byteLength > REQUEST_LIMIT) throw new Error();
       const controller = new AbortController();
@@ -60,10 +70,13 @@ export function createV1TokenProvider(csrfToken: () => string): SubmissionTokenP
       const exchange = async () => {
         const response = await fetch(`${origin}${PATH}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-BugDrop-CSRF-Token': token },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token === undefined ? {} : { 'X-BugDrop-CSRF-Token': token }),
+          },
           body,
           redirect: 'error',
-          credentials: 'same-origin',
+          credentials: csrfToken ? 'same-origin' : 'omit',
           cache: 'no-store',
           referrerPolicy: 'no-referrer',
           signal: controller.signal,

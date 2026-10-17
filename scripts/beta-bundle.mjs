@@ -10,6 +10,9 @@ const sourceCommit = run('git', ['rev-parse', 'HEAD']).trim();
 if (run('git', ['status', '--porcelain', '--untracked-files=all']).trim()) {
   throw new Error('Commit all source changes before creating a beta bundle');
 }
+const anonymous = process.argv[3] === '--anonymous';
+if (process.argv[3] !== undefined && !anonymous) throw new Error('Unknown bundle mode');
+const consumer = anonymous ? 'anonymous-consumer' : 'beta-consumer';
 const destination = resolve(process.argv[2] ?? join(repository, 'dist', `beta-${sourceCommit}`));
 // Never replace a previously produced release candidate.
 await mkdir(dirname(destination), { recursive: true });
@@ -38,12 +41,12 @@ for (const name of ['handler', 'transport']) {
   );
 }
 for (const name of ['browser.ts', 'server.ts']) {
-  await copyFile(
-    join(repository, `examples/beta-consumer/${name}`),
-    join(destination, 'src', name)
-  );
+  await copyFile(join(repository, `examples/${consumer}/${name}`), join(destination, 'src', name));
 }
-await copyFile(join(repository, 'docs/beta-consumer.md'), join(destination, 'README.md'));
+await copyFile(
+  join(repository, anonymous ? 'docs/anonymous-consumer.md' : 'docs/beta-consumer.md'),
+  join(destination, 'README.md')
+);
 const dependencies = Object.fromEntries(
   files.map((file, index) => [`@bugdrop/${index === 0 ? 'browser' : 'server'}`, `file:${file}`])
 );

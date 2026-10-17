@@ -221,3 +221,11 @@ accepted original issuer reservedAt+720h private-state retention, finite replay 
 and fail-closed ambiguity/storage behavior. P0 is frozen; cross-repository qualification
 requirements remain open. The ordinary V1 exports and contracts remain unchanged. The P0
 proposal alone does not authorize deployment or package publication.
+
+## Anonymous owner consumer
+
+The anonymous consumer example uses the existing V1 submission binding and capability envelope.
+It does not add visitor identity or a new reporting protocol. Its server policy requires exact
+origin, same-origin Fetch Metadata and a durable admission callback; its browser transport omits
+cookies and does not retry. The managed operator retains responsibility for shared quota and
+private destination authorization. See [anonymous installation](anonymous-consumer.md).
