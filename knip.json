@@ -15,7 +15,9 @@
         "examples/v1-backend/loopback-browser.ts",
         "examples/hosted-fixture/worker.ts",
         "examples/beta-consumer/browser.ts",
-        "examples/beta-consumer/server.ts"
+        "examples/beta-consumer/server.ts",
+        "examples/anonymous-consumer/server.ts",
+        "examples/anonymous-consumer/browser.ts"
       ],
       "project": [
         "scripts/**/*.mjs",
@@ -25,7 +27,8 @@
         "examples/opt-in-backend/*.ts",
         "examples/v1-backend/*.ts",
         "examples/hosted-fixture/*.ts",
-        "examples/beta-consumer/*.ts"
+        "examples/beta-consumer/*.ts",
+        "examples/anonymous-consumer/*.ts"
       ]
     },
     "packages/browser": {
