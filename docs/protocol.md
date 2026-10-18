@@ -229,3 +229,24 @@ It does not add visitor identity or a new reporting protocol. Its server policy 
 origin, same-origin Fetch Metadata and a durable admission callback; its browser transport omits
 cookies and does not retry. The managed operator retains responsibility for shared quota and
 private destination authorization. See [anonymous installation](anonymous-consumer.md).
+
+## Managed admission V1 extension (prepared, not deployed)
+
+The SDK server option `admission: 'managed-v1'` adds exactly that `admission` field to the
+V1 capability request. A supporting service must authenticate and authorize the app, enforce
+its capability exchange limit, durably bind the submission ID to the payload and trusted app
+context, and recheck revocation before signing. Only then may its V1 response include
+`admission: 'managed-v1'`. Unavailable or disabled admission must fail closed.
+The ingress must verify the issuer confirmation; echoing the requested value is insufficient.
+
+The SDK requires the exact confirmation for this option and returns only the original V1
+capability envelope to the widget. Missing/unknown confirmation is an invalid response with
+no retry or fallback. Requests without this option retain their existing behavior. Unknown
+request admission versions are rejected. This is an additive V1 extension, not V2 reporting.
+`packages/contracts/fixtures/managed-admission.v1.json` is the shared synthetic wire fixture
+with the managed runtime contract. Helper and issuer/ingress tests cover downgrade rejection.
+
+The new anonymous helper uses this option so customer servers need only their app API key,
+not platform database credentials. This extension neither spends nor resets the delivery
+budget and does not provision customer workspace delivery/activity. Those remain operator
+configuration. No current deployment or package availability is implied.

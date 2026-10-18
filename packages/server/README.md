@@ -24,8 +24,9 @@ unpadded base64url SHA-256 over the exact submission request-body bytes. Do not 
 reserialize JSON before hashing: whitespace, property order, and every other byte are significant.
 The hosted widget supplies both values through the browser package's token-provider binding.
 
-BugDrop authenticates the Application, not the people using it. The customer application remains
-responsible for authenticating and suspending its users and for enforcing user-specific limits.
+BugDrop authenticates the Application, not the people using it. Public sites may allow anonymous
+reports without visitor sign-in. If you restrict reports to signed-in users, your application
+remains responsible for that access policy and any user-specific limits.
 BugDrop may independently apply Application-, credential-, network/IP-, replay-, payload-, and
 platform-level protections.
 
@@ -85,3 +86,13 @@ This client requires the separately qualified V2 issuer, credentials, publicatio
 online verification infrastructure described by the frozen P0 contract. Installing the
 package does not provision or enable them. Existing `@bugdrop/server` V1 exports remain
 unchanged; `@bugdrop/server/opt-in` is server-only in both runtime and package exports.
+
+## Managed anonymous admission
+
+For a service explicitly supporting managed admission, construct the client with
+`{ apiKey, admission: 'managed-v1' }`. It requires the service to confirm durable submission
+binding and exchange limiting; an older or disabled service fails closed. The maintained
+[anonymous helper](../../docs/anonymous-consumer.md) adds the browser-origin checks and starts
+with reporting disabled. Customer servers need their app API key, not platform database
+credentials. Visitors need no account. Existing default client behavior is unchanged.
+This support is prepared locally; deployment and package publication are separate steps.

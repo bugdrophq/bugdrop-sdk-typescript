@@ -18,6 +18,7 @@ assertServerRuntime();
 
 export interface BugDropServerOptions {
   apiKey: string | undefined;
+  admission?: 'managed-v1';
   endpoint?: string;
   timeoutMs?: number;
   fetch?: typeof globalThis.fetch;
@@ -46,6 +47,7 @@ export class BugDropServerError extends Error {
 }
 
 export class BugDrop {
+  readonly #admission: 'managed-v1' | undefined;
   readonly #authenticator: CapabilityRequestAuthenticator;
   readonly #endpoint: string;
   readonly #timeoutMs: number;
@@ -56,6 +58,10 @@ export class BugDrop {
     if (!options || typeof options !== 'object') {
       throw new TypeError('BugDrop requires an options object');
     }
+    if (options.admission !== undefined && options.admission !== 'managed-v1') {
+      throw new TypeError('Unsupported BugDrop admission contract');
+    }
+    this.#admission = options.admission;
     this.#authenticator = createApiKeyAuthenticator(options.apiKey);
     this.#endpoint = validateEndpoint(options.endpoint ?? DEFAULT_CAPABILITY_ENDPOINT);
     this.#timeoutMs = validateTimeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -73,6 +79,7 @@ export class BugDrop {
       throw new TypeError('createSubmissionToken requires an options object');
     }
     const requestBody = createRequestBody(options);
+    if (this.#admission) requestBody.admission = this.#admission;
     const body = JSON.stringify(requestBody);
     const authenticationHeaders = await this.#authenticator.authenticateRequest({
       method: 'POST',
@@ -118,6 +125,15 @@ export class BugDrop {
     let payload: unknown;
     try {
       payload = await response.json();
+      if (
+        this.#admission &&
+        (!payload ||
+          typeof payload !== 'object' ||
+          !('admission' in payload) ||
+          payload.admission !== this.#admission)
+      ) {
+        throw new Error('Managed admission was not confirmed');
+      }
       return parseUsableSubmissionCapability(payload);
     } catch {
       throw new BugDropServerError(

@@ -1,0 +1,15 @@
+{
+  "request": {
+    "schemaVersion": 1,
+    "submissionId": "018f1f2e-7b4a-7c3d-9e10-4f5a6b7c8d90",
+    "payloadDigest": "sPybYsPwrJsoR8G8LbuHwYw3y-QHlqrYOfI-8lbJbEQ",
+    "origin": "https://app.example.com",
+    "admission": "managed-v1"
+  },
+  "response": {
+    "schemaVersion": 1,
+    "token": "synthetic-capability",
+    "expiresAt": "2099-01-01T00:00:00.000Z",
+    "admission": "managed-v1"
+  }
+}

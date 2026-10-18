@@ -20,6 +20,7 @@ export interface SubmissionCapabilityRequest extends SubmissionBinding {
   schemaVersion: typeof BUGDROP_CONTRACT_VERSION;
   origin?: string;
   environment?: string;
+  admission?: 'managed-v1';
 }
 
 export function parseSubmissionBinding(value: unknown): SubmissionBinding {
