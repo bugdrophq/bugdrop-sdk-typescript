@@ -1,5 +1,4 @@
-import { BugDrop } from '@bugdrop/browser';
-import { createV1TokenProvider } from '../v1-backend/transport.js';
+import { mountFeedback } from '../beta-consumer/browser.js';
 
 const button = document.querySelector<HTMLButtonElement>('#open');
 const status = document.querySelector<HTMLElement>('#status');
@@ -10,11 +9,10 @@ const applicationId = button.dataset.application ?? '';
 const widgetUrl = button.dataset.widget ?? '';
 if (!csrf || !applicationId || !widgetUrl) throw new Error('Fixture unavailable');
 
-const controller = BugDrop.init({
+const controller = mountFeedback({
   applicationId,
   widgetUrl,
-  tokenProvider: createV1TokenProvider(() => csrf),
-  button: false,
+  csrfToken: () => csrf,
 });
 
 button.addEventListener('click', async () => {

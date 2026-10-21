@@ -1,7 +1,12 @@
 # HTTPS customer SDK fixture
 
 This is a staging-only customer application shell for the V1 BugDrop SDK. It uses the packed
-`@bugdrop/browser` loader and `@bugdrop/server` through the existing V1 same-origin handler.
+`@bugdrop/browser` loader and `@bugdrop/server` through the existing V1 same-origin handler with mandatory `managed-v1` admission.
+The existing authenticated `mountFeedback` helper preserves cookie/CSRF transport. Unlike the
+anonymous invitee example, this private fixture retains its password, session, rate, lease, and
+ID-to-content checks; it adds managed admission rather than removing existing restrictions.
+The server rejects an issuer that does not explicitly confirm `managed-v1`. Opening the widget
+does not exchange a capability; submitting feedback does. Do not submit during a no-report walkthrough.
 It does **not** issue credentials, create an Application, install a GitHub App, or enable delivery.
 The browser sees only the public Application ID, widget URL, and a session-specific CSRF token.
 
@@ -86,3 +91,9 @@ The V1 server client's outbound capability request uses `redirect: 'manual'`. Wo
 redirect responses without following `Location`, forwarding the derived bearer, or retrying.
 It invokes the Fetch API as a function, preserving compatibility with runtimes that reject an SDK
 instance as the native function's receiver.
+
+A Cloudflare deployment may optionally bind `CAPABILITY_SERVICE` to the existing managed ingress
+Worker. This changes only the server SDK fetch transport: the configured capability endpoint,
+managed admission, operator session, same-origin, CSRF, rate, lease, and content binding checks
+still apply. Service errors fail closed without a public-network fallback. The binding must route
+the configured endpoint to the same authorized ingress; it does not grant the fixture database access.

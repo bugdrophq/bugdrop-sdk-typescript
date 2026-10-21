@@ -189,14 +189,26 @@ async function capability(
   if (!id) return denied();
   let lease: string | null = null;
   try {
+    const service = env.CAPABILITY_SERVICE;
     const handler = createV1Handler(
       {
         apiKey: env.BUGDROP_API_KEY,
         origin: env.FIXTURE_ORIGIN,
         endpoint: env.BUGDROP_CAPABILITY_ENDPOINT,
         timeoutMs: 5_000,
+        admission: 'managed-v1',
+        ...(service
+          ? {
+              fetch: async (input, init) => {
+                if (input !== new URL(env.BUGDROP_CAPABILITY_ENDPOINT).href)
+                  throw new Error('Unexpected capability endpoint');
+                return service.fetch(new Request(input, init));
+              },
+            }
+          : {}),
       },
       async (incoming, binding) => {
+        if (incoming.headers.get('Sec-Fetch-Site') !== 'same-origin') return false;
         const result = await callState(stub, '/authorize', {
           sessionId: id,
           csrf: incoming.headers.get('X-BugDrop-CSRF-Token'),
@@ -267,7 +279,7 @@ export default {
       if (typeof session?.csrf === 'string') {
         return page(
           `<!doctype html><meta charset="utf-8"><title>BugDrop SDK fixture</title>
-<h1>BugDrop SDK staging fixture</h1><p>Operator session active.</p>
+<h1>BugDrop managed SDK fixture</h1><p>Operator session active. Managed SDK connected through the existing private fixture access checks.</p>
 <button id="open" data-csrf="${escapeHtml(session.csrf)}" data-application="${escapeHtml(env.APPLICATION_ID)}" data-widget="${escapeHtml(env.WIDGET_URL)}" disabled>Open BugDrop</button>
 <p id="status" role="status"></p><script src="/fixture.js"></script>`,
           env.WIDGET_URL
