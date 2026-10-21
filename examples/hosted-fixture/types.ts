@@ -29,6 +29,7 @@ export interface FixtureEnv {
   OPERATOR_PASSWORD: string;
   BUGDROP_API_KEY: string;
   BUGDROP_CAPABILITY_ENDPOINT: string;
+  CAPABILITY_SERVICE?: { fetch(request: Request): Promise<Response> };
   FIXTURE_STATE: FixtureNamespace;
   ASSETS: { fetch(request: Request): Promise<Response> };
 }

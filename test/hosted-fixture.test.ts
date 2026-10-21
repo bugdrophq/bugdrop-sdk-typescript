@@ -1,121 +1,64 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from '../examples/hosted-fixture/worker.js';
-import { FixtureState } from '../examples/hosted-fixture/state.js';
-import type {
-  FixtureEnv,
-  FixtureExecutionContext,
-  FixtureStorage,
-} from '../examples/hosted-fixture/types.js';
-
-const ORIGIN = 'https://sdk-fixture.example';
-const DIGEST = Buffer.alloc(32, 1).toString('base64url');
-const OTHER_DIGEST = Buffer.alloc(32, 2).toString('base64url');
-const KEY = `bd_api_v1.${Buffer.alloc(16, 1).toString('base64url')}.${Buffer.alloc(32, 2).toString('base64url')}`;
-
-class MemoryStorage implements FixtureStorage {
-  readonly values = new Map<string, unknown>();
-  private tail = Promise.resolve();
-
-  async get<T>(key: string): Promise<T | undefined> {
-    return this.values.get(key) as T | undefined;
-  }
-  async put<T>(key: string, value: T): Promise<void> {
-    this.values.set(key, value);
-  }
-  async transaction<T>(callback: (tx: FixtureStorage) => Promise<T>): Promise<T> {
-    const previous = this.tail;
-    let release!: () => void;
-    this.tail = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await previous;
-    try {
-      return await callback(this);
-    } finally {
-      release();
-    }
-  }
-}
-
-function fixture() {
-  const storage = new MemoryStorage();
-  const state = new FixtureState({ storage });
-  const stub = { fetch: (request: Request) => state.fetch(request) };
-  const env: FixtureEnv = {
-    FIXTURE_ENABLED: 'true',
-    FIXTURE_ORIGIN: ORIGIN,
-    APPLICATION_ID: 'app_fixture',
-    WIDGET_URL: 'https://widget.bugdrop.dev/widget.v1.js',
-    OPERATOR_PASSWORD: 'test-password-that-is-over-32-bytes-long',
-    BUGDROP_API_KEY: KEY,
-    BUGDROP_CAPABILITY_ENDPOINT: 'https://issuer.example/v1/submission-capabilities',
-    FIXTURE_STATE: { idFromName: (name) => name, get: () => stub },
-    ASSETS: { fetch: async () => new Response('/* fixture */') },
-  };
-  return { storage, state, env };
-}
-
-async function stateCall(state: FixtureState, path: string, body: object) {
-  return state.fetch(
-    new Request(`https://fixture-state.internal${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-  );
-}
-
-async function login(env: FixtureEnv): Promise<{ cookie: string; csrf: string }> {
-  const response = await worker.fetch(
-    new Request(`${ORIGIN}/login`, {
-      method: 'POST',
-      headers: { Origin: ORIGIN, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `password=${encodeURIComponent(env.OPERATOR_PASSWORD)}`,
-    }),
-    env
-  );
-  expect(response.status).toBe(303);
-  const cookie = response.headers.get('Set-Cookie')!.split(';')[0]!;
-  const page = await worker.fetch(new Request(ORIGIN, { headers: { Cookie: cookie } }), env);
-  const html = await page.text();
-  const csrf = html.match(/data-csrf="([a-f0-9]{64})"/)?.[1];
-  expect(csrf).toBeDefined();
-  return { cookie, csrf: csrf! };
-}
-
-function capability(
-  env: FixtureEnv,
-  options: {
-    cookie?: string;
-    csrf?: string;
-    origin?: string;
-    id?: string;
-    digest?: string;
-  } = {},
-  context?: FixtureExecutionContext
-) {
-  return worker.fetch(
-    new Request(`${ORIGIN}/api/bugdrop-capability/v1`, {
-      method: 'POST',
-      headers: {
-        Origin: options.origin ?? ORIGIN,
-        'Content-Type': 'application/json',
-        ...(options.cookie ? { Cookie: options.cookie } : {}),
-        ...(options.csrf ? { 'X-BugDrop-CSRF-Token': options.csrf } : {}),
-      },
-      body: JSON.stringify({
-        submissionId: options.id ?? 'submission-1',
-        payloadDigest: options.digest ?? DIGEST,
-      }),
-    }),
-    env,
-    context
-  );
-}
+import {
+  ORIGIN,
+  DIGEST,
+  OTHER_DIGEST,
+  KEY,
+  fixture,
+  stateCall,
+  login,
+  capability,
+} from './hosted-fixture-helpers.js';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('hosted fixture', () => {
+  it.each([
+    'https://issuer.example/v1/submission-capabilities',
+    'https://ISSUER.example:443/v1/submission-capabilities',
+  ])('uses the service transport for %s only after session checks', async (endpoint) => {
+    const { env } = fixture();
+    env.BUGDROP_CAPABILITY_ENDPOINT = endpoint;
+    const network = vi.fn();
+    vi.stubGlobal('fetch', network);
+    const bound = vi.fn(async (request: Request) => {
+      expect(request.url).toBe(new URL(env.BUGDROP_CAPABILITY_ENDPOINT).href);
+      expect(request.headers.get('authorization')).toMatch(/^Bearer bd_auth_v1\./);
+      expect(request.headers.get('authorization')).not.toContain(KEY);
+      expect(request.headers.has('cookie')).toBe(false);
+      expect(request.headers.has('X-BugDrop-CSRF-Token')).toBe(false);
+      expect((await request.json()).admission).toBe('managed-v1');
+      return Response.json({
+        schemaVersion: 1,
+        token: 'opaque-capability',
+        admission: 'managed-v1',
+        expiresAt: new Date(Date.now() + 240_000).toISOString(),
+      });
+    });
+    env.CAPABILITY_SERVICE = { fetch: bound };
+    expect((await capability(env)).status).toBe(502);
+    expect(bound).not.toHaveBeenCalled();
+    const active = await login(env);
+    expect((await capability(env, active)).status).toBe(200);
+    expect(bound).toHaveBeenCalledTimes(1);
+    expect(network).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to public fetch when the configured capability service fails', async () => {
+    const { env } = fixture();
+    const network = vi.fn();
+    vi.stubGlobal('fetch', network);
+    env.CAPABILITY_SERVICE = {
+      fetch: vi.fn(async () => {
+        throw new Error('unavailable');
+      }),
+    };
+    const active = await login(env);
+    expect((await capability(env, active)).status).toBe(502);
+    expect(network).not.toHaveBeenCalled();
+  });
+
   it('stays unavailable when the rollout gate is off, even with otherwise valid bindings', async () => {
     const { env } = fixture();
     env.FIXTURE_ENABLED = 'false';
@@ -150,6 +93,7 @@ describe('hosted fixture', () => {
       ).status
     ).toBe(502);
     expect((await worker.fetch(new Request('https://other.example/'), env)).status).toBe(502);
+    expect((await capability(env, { ...active, site: 'cross-site' })).status).toBe(502);
     expect(issuer).not.toHaveBeenCalled();
     expect((await capability(env, { cookie: active.cookie, csrf: active.csrf })).status).toBe(502);
     expect(issuer).toHaveBeenCalledTimes(1);
@@ -177,19 +121,27 @@ describe('hosted fixture', () => {
     expect((await approve(firstId, first.csrf)).status).toBe(200);
   });
 
-  it('returns redacted denial with no local capability when upstream is absent', async () => {
+  it.each(['offline', 'legacy'])('fails closed without managed confirmation: %s', async (mode) => {
     const { env } = fixture();
     const active = await login(env);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
-        throw new Error('issuer offline');
+        if (mode === 'offline') throw new Error('issuer offline');
+        return Response.json({
+          schemaVersion: 1,
+          token: 'opaque-capability',
+          expiresAt: new Date(Date.now() + 240_000).toISOString(),
+        });
       })
     );
     const response = await capability(env, active);
     expect(response.status).toBe(502);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.text()).toBe('{"error":"unable_to_authorize_bugdrop"}');
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const outgoing = vi.mocked(fetch).mock.calls[0]?.[1]?.body;
+    expect(JSON.parse(String(outgoing)).admission).toBe('managed-v1');
   });
 });
 
@@ -224,6 +176,7 @@ describe('hosted fixture lease cleanup', () => {
         Response.json({
           schemaVersion: 1,
           token: 'opaque-capability',
+          admission: 'managed-v1',
           expiresAt: new Date(Date.now() + 240_000).toISOString(),
         })
       )
