@@ -3,7 +3,7 @@ import type { FixtureSession, FixtureStateContext, FixtureStorage } from './type
 const SESSION_MS = 30 * 60_000;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 8;
-const LEASE_MS = 9_000;
+const LEASE_MS = 21_000;
 const JSON_HEADERS = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
 type Binding = { sessionId: string; payloadDigest: string };

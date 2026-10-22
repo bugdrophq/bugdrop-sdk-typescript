@@ -3,7 +3,7 @@ import type { SubmissionTokenProvider } from '@bugdrop/browser';
 const PATH = '/api/bugdrop-capability/v1';
 const REQUEST_LIMIT = 1024;
 const RESPONSE_LIMIT = 32768;
-const DEADLINE_MS = 8000;
+const DEADLINE_MS = 25_000;
 
 // The customer's CSRF token is intentionally distinct from the server-only BugDrop API key.
 export function createV1TokenProvider(csrfToken: () => string): SubmissionTokenProvider {

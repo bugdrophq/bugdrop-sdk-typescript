@@ -27,8 +27,8 @@ The browser sees only the public Application ID, widget URL, and a session-speci
   Reuse with a different digest or session is denied. Bindings remain until the fixture's
   Durable Object storage is deliberately retired.
 - The policy permits at most eight authorized requests per session per minute and one active
-  exchange per session. A lease expires after nine seconds if the Worker dies. The issuer
-  timeout is five seconds and the capability response has an eight-second deadline. Lease
+  exchange per session. A lease expires after twenty-one seconds if the Worker dies. The issuer
+  timeout is eighteen seconds and the capability response has a twenty-second deadline. Lease
   cleanup runs through the Worker execution context after the response is ready. Denials are
   redacted, no-store, and never fall back to a local token. Operator sign-in is also limited to
   eight attempts per minute across this staging fixture.
@@ -97,3 +97,7 @@ Worker. This changes only the server SDK fetch transport: the configured capabil
 managed admission, operator session, same-origin, CSRF, rate, lease, and content binding checks
 still apply. Service errors fail closed without a public-network fallback. The binding must route
 the configured endpoint to the same authorized ingress; it does not grant the fixture database access.
+
+The browser token-provider deadline is twenty-five seconds. The managed widget must allow
+that authorization window plus its independent delivery window; issuance and delivery are
+never retried automatically. Timeouts do not extend capability lifetime or skip revocation checks.
