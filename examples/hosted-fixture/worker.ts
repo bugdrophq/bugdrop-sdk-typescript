@@ -195,7 +195,7 @@ async function capability(
         apiKey: env.BUGDROP_API_KEY,
         origin: env.FIXTURE_ORIGIN,
         endpoint: env.BUGDROP_CAPABILITY_ENDPOINT,
-        timeoutMs: 5_000,
+        timeoutMs: 18_000,
         admission: 'managed-v1',
         ...(service
           ? {
@@ -220,7 +220,7 @@ async function capability(
       }
     );
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8_000);
+    const timer = setTimeout(() => controller.abort(), 20_000);
     try {
       const inbound = new Request(request, { signal: controller.signal });
       return await Promise.race([

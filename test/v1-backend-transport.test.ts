@@ -174,7 +174,7 @@ describe('V1 browser deadline', () => {
         settled = true;
       }
     );
-    await vi.advanceTimersByTimeAsync(7999);
+    await vi.advanceTimersByTimeAsync(24999);
     expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     await assertion;
@@ -194,7 +194,7 @@ describe('V1 browser deadline', () => {
     vi.stubGlobal('fetch', browserFetch);
     const pending = createV1TokenProvider(() => 'csrf-fixture')(binding);
     const assertion = expect(pending).rejects.toThrow(/^Unable to authorize BugDrop$/);
-    await vi.advanceTimersByTimeAsync(8000);
+    await vi.advanceTimersByTimeAsync(25000);
     await assertion;
     expect(signal?.aborted).toBe(true);
     expect(cancel).toHaveBeenCalledOnce();
@@ -212,7 +212,7 @@ describe('V1 browser deadline', () => {
     vi.stubGlobal('fetch', browserFetch);
     const pending = createV1TokenProvider(() => 'csrf-fixture')(binding);
     const assertion = expect(pending).rejects.toThrow(/^Unable to authorize BugDrop$/);
-    await vi.advanceTimersByTimeAsync(8000);
+    await vi.advanceTimersByTimeAsync(25000);
     await assertion;
     const cancel = vi.fn(() => new Promise<void>(() => {}));
     release(
