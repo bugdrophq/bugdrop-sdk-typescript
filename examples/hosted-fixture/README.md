@@ -101,3 +101,23 @@ the configured endpoint to the same authorized ingress; it does not grant the fi
 The browser token-provider deadline is twenty-five seconds. The managed widget must allow
 that authorization window plus its independent delivery window; issuance and delivery are
 never retried automatically. Timeouts do not extend capability lifetime or skip revocation checks.
+
+### Optional self-service backend connection
+
+Set `SELF_SERVICE_BINDING=1` during one reviewed fixture deployment to replace
+per-cycle Application/API-key environment edits with the private **Connect
+backend** form. Keep all existing private login, origin, CSRF, rate, lease and
+service transport configuration. Do not weaken those checks or reset fixture
+state. This mode may leave deployment-level `APPLICATION_ID` and `BUGDROP_API_KEY`
+empty; they are never a fallback in self-service mode.
+
+After login, enter the public Application ID and the one-time API key issued by
+the account dashboard. The server returns an encrypted, session-bound HttpOnly
+cookie and renders only the public Application ID. Connect the replacement key
+through the same form after normal account-side revocation and replacement-key
+activation. Each new lifecycle cycle uses a new Application and key. Resetting
+an account must make old key/capability requests fail even if the old encrypted
+fixture cookie remains. See `docs/protocol.md` for custody and expiration rules.
+
+Deploying this fixture still requires explicit approval. A build or passing unit
+test is not a production lifecycle result.
