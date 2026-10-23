@@ -250,3 +250,28 @@ The new anonymous helper uses this option so customer servers need only their ap
 not platform database credentials. This extension neither spends nor resets the delivery
 budget and does not provision customer workspace delivery/activity. Those remain operator
 configuration. No current deployment or package availability is implied.
+
+## Private hosted fixture backend binding (fixture-backend.v1)
+
+The hosted fixture has an optional self-service backend setup form. With
+`SELF_SERVICE_BINDING=1`, the existing private fixture login is still mandatory;
+there is no fallback to the deployment's Application or API key. After login,
+`POST /backend-binding` accepts exactly `csrf`, `application_id`, and `api_key`
+as a bounded same-origin form. This is a fixture server operation, never a
+browser SDK configuration field or a new credential-exchange protocol.
+
+The server encrypts the validated binding in an AES-GCM HttpOnly, Secure,
+SameSite=Strict cookie, authenticating the exact fixture origin and existing
+session ID as associated data. The encryption key is derived with a distinct
+versioned domain from the existing private fixture login secret. Bindings expire
+in 30 minutes and also require the original live fixture session. The server
+renders only the public Application ID. Neither key roots nor decrypted bindings
+are saved in fixture Durable Object storage, returned to JavaScript, or logged.
+Changing the login secret invalidates encrypted bindings. Managed account key
+revocation remains authoritative even while an encrypted fixture cookie exists.
+
+This fixture custody mechanism is not a recommendation to store a production
+customer backend's API key in a browser cookie. Real integrations should keep
+keys in their backend secret store. Private fixture access does not enroll a
+BugDrop user or grant GitHub privileges. Account-side activation and runtime
+binding remain separately gated to the approved numeric GitHub canary identity.

@@ -1,6 +1,8 @@
-import { createV1Handler } from '../v1-backend/handler.js';
+import { capability } from './capability.js';
+import { callState } from './state-client.js';
 import { FixtureState } from './state.js';
-import type { FixtureEnv, FixtureExecutionContext, FixtureStub } from './types.js';
+import { readBackendBinding, saveBackendBinding } from './backend-binding.js';
+import type { FixtureEnv, FixtureExecutionContext } from './types.js';
 
 export { FixtureState };
 
@@ -24,7 +26,8 @@ function unavailable(): Response {
 
 function safeConfig(env: FixtureEnv): boolean {
   try {
-    if (env.FIXTURE_ENABLED !== 'true') return false;
+    if (env.FIXTURE_ENABLED !== 'true' || ![undefined, '1'].includes(env.SELF_SERVICE_BINDING))
+      return false;
     const origin = new URL(env.FIXTURE_ORIGIN);
     const widget = new URL(env.WIDGET_URL);
     const issuer = new URL(env.BUGDROP_CAPABILITY_ENDPOINT);
@@ -42,12 +45,13 @@ function safeConfig(env: FixtureEnv): boolean {
       !issuer.password &&
       !issuer.search &&
       !issuer.hash &&
-      typeof env.APPLICATION_ID === 'string' &&
-      /^[\x21-\x7e]{3,200}$/.test(env.APPLICATION_ID) &&
+      (env.SELF_SERVICE_BINDING === '1' ||
+        (typeof env.APPLICATION_ID === 'string' &&
+          /^[\x21-\x7e]{3,200}$/.test(env.APPLICATION_ID))) &&
       typeof env.OPERATOR_PASSWORD === 'string' &&
       env.OPERATOR_PASSWORD.length >= 32 &&
-      typeof env.BUGDROP_API_KEY === 'string' &&
-      env.BUGDROP_API_KEY.length > 0 &&
+      (env.SELF_SERVICE_BINDING === '1' ||
+        (typeof env.BUGDROP_API_KEY === 'string' && env.BUGDROP_API_KEY.length > 0)) &&
       typeof env.FIXTURE_STATE?.get === 'function' &&
       typeof env.ASSETS?.fetch === 'function'
     );
@@ -86,30 +90,6 @@ function sessionId(cookie: string | null): string | null {
   if (!values || values.length !== 1) return null;
   const value = values[0]?.slice(COOKIE.length + 1);
   return value && /^[a-f0-9]{64}$/.test(value) ? value : null;
-}
-
-async function callState(
-  stub: FixtureStub,
-  path: string,
-  body: object
-): Promise<Record<string, unknown> | null> {
-  try {
-    const response = await stub.fetch(
-      new Request(`https://fixture-state.internal${path}`, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(1500),
-      })
-    );
-    if (!response.ok) return null;
-    const value: unknown = await response.json();
-    return value && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 async function readLogin(request: Request): Promise<string | null> {
@@ -179,70 +159,6 @@ async function equalSecret(candidate: string | null, expected: string): Promise<
   return diff === 0;
 }
 
-async function capability(
-  request: Request,
-  env: FixtureEnv,
-  stub: FixtureStub,
-  id: string | null,
-  context?: FixtureExecutionContext
-): Promise<Response> {
-  if (!id) return denied();
-  let lease: string | null = null;
-  try {
-    const service = env.CAPABILITY_SERVICE;
-    const handler = createV1Handler(
-      {
-        apiKey: env.BUGDROP_API_KEY,
-        origin: env.FIXTURE_ORIGIN,
-        endpoint: env.BUGDROP_CAPABILITY_ENDPOINT,
-        timeoutMs: 18_000,
-        admission: 'managed-v1',
-        ...(service
-          ? {
-              fetch: async (input, init) => {
-                if (input !== new URL(env.BUGDROP_CAPABILITY_ENDPOINT).href)
-                  throw new Error('Unexpected capability endpoint');
-                return service.fetch(new Request(input, init));
-              },
-            }
-          : {}),
-      },
-      async (incoming, binding) => {
-        if (incoming.headers.get('Sec-Fetch-Site') !== 'same-origin') return false;
-        const result = await callState(stub, '/authorize', {
-          sessionId: id,
-          csrf: incoming.headers.get('X-BugDrop-CSRF-Token'),
-          ...binding,
-        });
-        if (typeof result?.lease !== 'string' || !/^[a-f0-9]{64}$/.test(result.lease)) return false;
-        lease = result.lease;
-        return true;
-      }
-    );
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20_000);
-    try {
-      const inbound = new Request(request, { signal: controller.signal });
-      return await Promise.race([
-        handler(inbound),
-        new Promise<Response>((resolve) =>
-          controller.signal.addEventListener('abort', () => resolve(denied()), { once: true })
-        ),
-      ]);
-    } finally {
-      clearTimeout(timer);
-      controller.abort();
-    }
-  } catch {
-    return denied();
-  } finally {
-    if (lease) {
-      const cleanup = callState(stub, '/finish', { sessionId: id, lease });
-      context?.waitUntil(cleanup);
-    }
-  }
-}
-
 export default {
   async fetch(
     request: Request,
@@ -254,6 +170,15 @@ export default {
     if (url.origin !== env.FIXTURE_ORIGIN || url.search || url.hash) return denied();
     const stub = env.FIXTURE_STATE.get(env.FIXTURE_STATE.idFromName('global-v1'));
     const id = sessionId(request.headers.get('Cookie'));
+    if (request.method === 'POST' && url.pathname === '/backend-binding') {
+      const session = id ? await callState(stub, '/session', { sessionId: id }) : null;
+      return saveBackendBinding(
+        request,
+        env,
+        id,
+        typeof session?.csrf === 'string' ? session.csrf : undefined
+      );
+    }
     if (request.method === 'POST' && url.pathname === ROUTE) {
       return capability(request, env, stub, id, context);
     }
@@ -277,11 +202,13 @@ export default {
     if (request.method === 'GET' && url.pathname === '/') {
       const session = id ? await callState(stub, '/session', { sessionId: id }) : null;
       if (typeof session?.csrf === 'string') {
+        const binding = await readBackendBinding(request, env, id);
         return page(
           `<!doctype html><meta charset="utf-8"><title>BugDrop SDK fixture</title>
 <h1>BugDrop managed SDK fixture</h1><p>Operator session active. Managed SDK connected through the existing private fixture access checks.</p>
-<button id="open" data-csrf="${escapeHtml(session.csrf)}" data-application="${escapeHtml(env.APPLICATION_ID)}" data-widget="${escapeHtml(env.WIDGET_URL)}" disabled>Open BugDrop</button>
-<p id="status" role="status"></p><script src="/fixture.js"></script>`,
+${env.SELF_SERVICE_BINDING === '1' ? `<form method="post" action="/backend-binding"><input type="hidden" name="csrf" value="${escapeHtml(session.csrf)}"><label>Application ID <input name="application_id" required autocomplete="off"></label><label>Server API key <input name="api_key" type="password" required autocomplete="off"></label><button>Connect backend</button></form><p>${binding ? 'Backend connected.' : 'Connect your backend before opening BugDrop.'}</p>` : ''}
+${binding ? `<button id="open" data-csrf="${escapeHtml(session.csrf)}" data-application="${escapeHtml(binding.applicationId)}" data-widget="${escapeHtml(env.WIDGET_URL)}" disabled>Open BugDrop</button>` : ''}
+<p id="status" role="status"></p>${binding ? '<script src="/fixture.js"></script>' : ''}`,
           env.WIDGET_URL
         );
       }
