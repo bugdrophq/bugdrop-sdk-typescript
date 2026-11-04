@@ -1,3 +1,4 @@
+import { checkAdapterExports } from './integration/adapter-exports.mjs';
 import { isAbsolute, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkEvidenceAssertions } from './integration/evidence-checks.mjs';
@@ -10,6 +11,7 @@ import { checkRemoteCapabilityProvider } from './integration/remote-capability-c
 const repository = resolve(import.meta.dirname, '..');
 const consumer = await installConsumer(repository);
 try {
+  await checkAdapterExports(consumer);
   const fixtures = await readFixtures(repository);
   checkEvidenceAssertions(fixtures, consumer.versions.server);
   await checkTransport(consumer, fixtures);

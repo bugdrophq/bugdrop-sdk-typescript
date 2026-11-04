@@ -51,3 +51,16 @@ Reference implementations are maintained for [Next.js](examples/nextjs-route.md)
 [Express](examples/express-route.md). They show the protocol boundary, not a universal user-auth or
 rate-limiting system; replace the marked customer-policy hooks with controls appropriate to the
 application.
+
+## Managed adapter boundaries
+
+The additive server adapters are default-off and force managed-v1 confirmation. Explicit
+anonymous mode omits browser cookies; customer-policy mode requires a strict-true customer
+policy and its browser provider requires a CSRF source. Canonical configured origin, exact
+routing, strict raw bytes, request metadata and native header ambiguity checks fail closed.
+A total 18-second server deadline and 25-second browser deadline include response reads;
+transport checks cancellation immediately before issuer contact. No retries occur. Policies
+must honor cancellation for their own side effects. Safe optional diagnostics are immutable,
+once-only, allowlisted and contain no body, binding, URL, header value, key or exception text.
+Browser bundling either server adapter resolves to the existing fail-closed browser guard.
+The browser providers contain no server imports or credentials. See [adapter limits](./adapter.md).

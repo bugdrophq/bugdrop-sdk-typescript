@@ -275,3 +275,19 @@ customer backend's API key in a browser cookie. Real integrations should keep
 keys in their backend secret store. Private fixture access does not enroll a
 BugDrop user or grant GitHub privileges. Account-side activation and runtime
 binding remain separately gated to the approved numeric GitHub canary identity.
+
+## Additive managed adapter contract
+
+The reusable adapter consolidates the SDK v1 backend reference and the explicitly reviewed
+Foil `api/bugdrop-capability/v1.ts` plus `lib/bugdrop/{handler,transport,server}.ts` source
+at `usefoil/foil-web` commit `becf24d175dbdda28615fed6edf89485418729d7` (2026-11-04). This records a local
+source contract, not a claim of deployment or runtime qualification. The corrected overall
+server timeout is 18 seconds, allowing a 12-second issuer operation while bounding 18-second
+stalls. Tests exercise the real SDK authentication and managed-v1 confirmation with synthetic
+credentials and responses; no provider or live report is required.
+
+New adapters default to the trailing-slash `/api/bugdrop-capability/v1/`, managed issuer
+`https://managed.bugdrop.dev/v1/submission-capabilities`, and `production` environment.
+Existing reference examples retain their own paths and defaults. Native Node raw envelopes
+are checked before adapting to the Web interface. Portable interfaces do not imply edge
+runtime support: Node20+ and Node crypto are required. See [adapter details](./adapter.md).

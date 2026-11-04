@@ -40,7 +40,7 @@
       "project": ["src/**/*.ts"]
     },
     "packages/server": {
-      "entry": ["src/index.ts", "src/browser.ts", "src/opt-in.ts"],
+      "entry": ["src/index.ts", "src/browser.ts", "src/opt-in.ts", "src/adapter.ts", "src/node.ts"],
       "project": ["src/**/*.ts"]
     }
   }

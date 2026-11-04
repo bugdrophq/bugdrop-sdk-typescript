@@ -96,3 +96,13 @@ binding and exchange limiting; an older or disabled service fails closed. The ma
 with reporting disabled. Customer servers need their app API key, not platform database
 credentials. Visitors need no account. Existing default client behavior is unchanged.
 This support is prepared locally; deployment and package publication are separate steps.
+
+## Managed capability adapters
+
+Use `createCapabilityHandler` from `@bugdrop/server/adapter` for a Node20+ Web
+Request/Response handler or `createNodeCapabilityHandler` from `@bugdrop/server/node`
+for native Node streams. Select explicit anonymous or customer-policy mode and enable
+with literal `true`. Both default to `/api/bugdrop-capability/v1/` and managed production
+admission. The browser exports `createAnonymousTokenProvider` and
+`createCustomerPolicyTokenProvider` (requires a customer CSRF source).
+See [adapter usage and security limits](https://github.com/bugdrophq/bugdrop-sdk-typescript/blob/main/docs/adapter.md).
