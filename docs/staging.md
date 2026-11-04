@@ -234,3 +234,17 @@ submission or delete a real Issue to conceal the outcome. Remote resource rollba
 an explicit prerequisite of the currently unimplemented provider.
 
 No deployment, credential issuance, provisioning, SDK publication, or customer installation is included.
+
+## Versioned local test coverage
+
+The positive provider/observer unit cases install the genuine archived server `0.1.0` package
+from SDK source `760c031035e866dbc89a4e0ab1886c67bd45fa15`. Its committed test-only tarball
+has an independently pinned SHA256 and installed manifest check; it is not a relabelled current
+candidate. These are synthetic loopback fixtures, not historical or current remote proof.
+
+Separate tests install the actual current package. An explicitly versioned local HTTP fixture
+accepts its unchanged SDK header and records it verbatim. The unchanged signed observer rejects
+the candidate's `0.2.0` observation and remains failed through cleanup; the default HTTP fixture
+also rejects the candidate. The remote safety handshake and completion receipt continue to
+reject `0.2.0` before private actions. Passing local tests does not extend the frozen `0.1.0`
+qualification or authorize remote staging.

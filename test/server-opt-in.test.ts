@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BugDropOptIn, BugDropOptInError } from '../packages/server/src/opt-in.js';
+import serverPackage from '../packages/server/package.json';
 import {
   binding,
   browserMetadata,
@@ -38,7 +39,10 @@ describe('server opt-in public entry and trusted configuration', () => {
         r.intent
       );
       expect(headers.get('Authorization')).toBe(fixture.authentication.authorization);
-      expect(headers.get('X-BugDrop-SDK-Version')).toBe('0.1.0');
+      expect(headers.get('X-BugDrop-SDK-Version')).toBe(serverPackage.version);
+      expect(r.intent.serverSdkVersion).toBe(serverPackage.version);
+      // A package release does not enroll that version into the frozen V2 catalog.
+      expect(r.intent.normalizedVersions.sdkVersion).toBeNull();
       expect(init).toMatchObject({
         method: 'POST',
         redirect: 'error',

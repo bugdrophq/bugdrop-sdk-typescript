@@ -291,3 +291,10 @@ New adapters default to the trailing-slash `/api/bugdrop-capability/v1/`, manage
 Existing reference examples retain their own paths and defaults. Native Node raw envelopes
 are checked before adapting to the Web interface. Portable interfaces do not imply edge
 runtime support: Node20+ and Node crypto are required. See [adapter details](./adapter.md).
+
+Release preparation sets browser/server package metadata to `0.2.0` without changing wire
+contracts or the frozen V2 catalog. The new server version is emitted as a raw claim and
+normalizes to `null` under that catalog. The frozen observer/safety/receipt contract still
+requires `0.1.0`; [local versioned tests](./staging.md#versioned-local-test-coverage) retain a
+checksummed real `0.1.0` package and independently exercise the current candidate's rejection.
+Neither local fixture selection nor a package version transfers production qualification.

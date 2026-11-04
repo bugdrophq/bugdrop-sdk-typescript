@@ -78,3 +78,6 @@ with literal `true`. Both default to `/api/bugdrop-capability/v1/` and managed p
 admission. The browser exports `createAnonymousTokenProvider` and
 `createCustomerPolicyTokenProvider` (requires a customer CSRF source).
 See [adapter usage and security limits](https://github.com/bugdrophq/bugdrop-sdk-typescript/blob/main/docs/adapter.md).
+
+The [0.2.0 release preparation](docs/releases/0.2.0.md) describes the private adapter
+candidate and remaining publication and hosted-qualification gates.
