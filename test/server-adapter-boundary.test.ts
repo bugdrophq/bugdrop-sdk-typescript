@@ -48,9 +48,9 @@ describe('strict adapter envelope', () => {
   });
   it('rejects duplicates, escaped duplicates, unknown fields, invalid IDs/digests and UTF8', async () => {
     const bodies: BodyInit[] = [
-      body.replace('{', '{"submissionId":"duplicate",'),
-      body.replace('{', '{"submiss\\u0069onId":"duplicate",'),
-      body.replace('}', ',"userId":"secret"}'),
+      `{"submissionId":"duplicate",${body.slice(1)}`,
+      `{"submiss\\u0069onId":"duplicate",${body.slice(1)}`,
+      `${body.slice(0, -1)},"userId":"secret"}`,
       '[]',
       'null',
       '{}',
