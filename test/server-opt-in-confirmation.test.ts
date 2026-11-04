@@ -23,7 +23,10 @@ describe('valid signatures are insufficient without exact lifetime and normalize
     async (field) => {
       const fetch = vi.fn<typeof globalThis.fetch>(async (_url, init) => {
         const { intent } = JSON.parse(String(init?.body));
-        intent.normalizedVersions[field] = field === 'widgetVersion' ? '0.2.0' : null;
+        const original = intent.normalizedVersions[field];
+        intent.normalizedVersions[field] =
+          original === null ? (field === 'protocolVersion' ? 1 : '0.1.0') : null;
+        expect(intent.normalizedVersions[field]).not.toEqual(original);
         return new Response(JSON.stringify(signedResponse(intent, clock)), {
           headers: responseHeaders,
         });

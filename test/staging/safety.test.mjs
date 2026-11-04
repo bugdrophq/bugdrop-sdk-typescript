@@ -13,21 +13,23 @@ test('runner identity and installed SDK version fail closed before private actio
     assert.throws(() => assertSafetyRunner({ packedSdkSafetyContract, runRemoteSafety() {} }));
   }
   assert.throws(() => assertSafetyRunner({ packedSdkSafetyContract: contract }));
-  const input = context();
-  input.consumer.versions.server = '0.1.1';
-  let called = false;
-  await assert.rejects(
-    runSafety({
-      ...input,
-      runner: {
-        packedSdkSafetyContract: contract,
-        runRemoteSafety() {
-          called = true;
+  for (const sdkVersion of ['0.1.1', '0.2.0']) {
+    const input = context();
+    input.consumer.versions.server = sdkVersion;
+    let called = false;
+    await assert.rejects(
+      runSafety({
+        ...input,
+        runner: {
+          packedSdkSafetyContract: contract,
+          runRemoteSafety() {
+            called = true;
+          },
         },
-      },
-    })
-  );
-  assert.equal(called, false);
+      })
+    );
+    assert.equal(called, false);
+  }
 });
 
 test('partial, unavailable lifecycle and retention attestations never satisfy completion', async () => {

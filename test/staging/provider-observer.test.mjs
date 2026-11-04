@@ -2,7 +2,8 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { installConsumer, readFixtures } from '../../scripts/integration/packed-consumer.mjs';
+import { readFixtures } from '../../scripts/integration/packed-consumer.mjs';
+import { installFrozenObserverConsumer } from './frozen-consumer-support.mjs';
 import { runScenarios } from '../../scripts/staging/scenarios.mjs';
 import { safetyProvider } from '../../scripts/staging/safety-provider.mjs';
 import { credentialCanaries } from '../../scripts/staging/canaries.mjs';
@@ -14,7 +15,7 @@ import { providerObserverFixture } from './provider-observer-support.mjs';
 const repository = resolve(import.meta.dirname, '../..');
 let consumer, fixtures;
 before(async () => {
-  consumer = await installConsumer(repository);
+  consumer = await installFrozenObserverConsumer();
   fixtures = await readFixtures(repository);
 });
 after(async () => consumer?.close());
@@ -29,7 +30,7 @@ async function setup() {
   return { local, target: { ...baseTarget, endpoint: local.endpoint } };
 }
 
-test('packed SDK and signed observer reconcile all seven provider scenarios exactly', async () => {
+test('frozen packed SDK0.1 and signed observer reconcile all seven provider scenarios exactly', async () => {
   const { local, target } = await setup();
   const attested = [];
   try {

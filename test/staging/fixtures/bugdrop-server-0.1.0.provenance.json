@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Frozen0.1 signed-observer local contract tests only; not current release or remote proof",
+  "sourceRepository": "https://github.com/bugdrophq/bugdrop-sdk-typescript",
+  "sourceCommit": "760c031035e866dbc89a4e0ab1886c67bd45fa15",
+  "name": "@bugdrop/server",
+  "version": "0.1.0",
+  "sha256": "f1fdae6acaafa6f3bcd55a1a70d77bba5d3772b921362e66d7bd7ebceaee298a"
+}

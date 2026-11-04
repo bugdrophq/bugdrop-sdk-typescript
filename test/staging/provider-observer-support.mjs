@@ -7,7 +7,7 @@ import { observerFixture } from './observer-support.mjs';
 const apiKey = () =>
   `bd_api_v1.${randomBytes(16).toString('base64url')}.${randomBytes(32).toString('base64url')}`;
 
-function parseV1Request(request, body, record, expectedDigest) {
+function parseV1Request(request, body, record, expectedDigest, expectedSdkVersion) {
   let parsed;
   try {
     parsed = JSON.parse(body);
@@ -20,7 +20,7 @@ function parseV1Request(request, body, record, expectedDigest) {
     request.headers['content-type'] !== 'application/json' ||
     request.headers.accept !== 'application/vnd.bugdrop.submission-capability.v1+json' ||
     request.headers['x-bugdrop-contract-version'] !== '1' ||
-    request.headers['x-bugdrop-sdk-version'] !== '0.1.0' ||
+    request.headers['x-bugdrop-sdk-version'] !== expectedSdkVersion ||
     !parsed ||
     typeof parsed !== 'object' ||
     Array.isArray(parsed) ||
@@ -38,8 +38,13 @@ function parseV1Request(request, body, record, expectedDigest) {
 }
 
 // A local contract double: HTTP is real, while admission and observations are synthetic.
-export async function providerObserverFixture(target, expectedDigest) {
+export async function providerObserverFixture(
+  target,
+  expectedDigest,
+  expectedSdkVersion = '0.1.0'
+) {
   assert.match(expectedDigest, /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/);
+  assert.match(expectedSdkVersion, /^\d+\.\d+\.\d+$/);
   const records = [];
   let active;
   const server = createServer(async (request, response) => {
@@ -53,7 +58,7 @@ export async function providerObserverFixture(target, expectedDigest) {
       response.end();
     };
     if (request.headers.authorization !== record.expectedBearer) return reject(401);
-    const parsed = parseV1Request(request, body, record, expectedDigest);
+    const parsed = parseV1Request(request, body, record, expectedDigest, expectedSdkVersion);
     if (!parsed) return reject(400);
     if (record.preAdmission503) {
       response.writeHead(503);
