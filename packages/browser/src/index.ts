@@ -13,3 +13,9 @@ export class BugDrop {
     return initialize(options, 'classic');
   }
 }
+
+export {
+  createAnonymousTokenProvider,
+  createCustomerPolicyTokenProvider,
+  type TokenProviderOptions,
+} from './token-provider.js';

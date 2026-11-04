@@ -68,3 +68,13 @@ Use the [portable consumer guide](docs/beta-consumer.md) to produce a commit-ide
 both packed packages, a relative-path lockfile, and TypeScript browser/server entrypoints using
 the existing V1 helpers. `npm run beta:bundle` requires clean committed source and performs no
 publication or deployment. Hosted fresh-user acceptance remains a separate operator-owned gate.
+
+## Managed capability adapters
+
+Use `createCapabilityHandler` from `@bugdrop/server/adapter` for a Node20+ Web
+Request/Response handler or `createNodeCapabilityHandler` from `@bugdrop/server/node`
+for native Node streams. Select explicit anonymous or customer-policy mode and enable
+with literal `true`. Both default to `/api/bugdrop-capability/v1/` and managed production
+admission. The browser exports `createAnonymousTokenProvider` and
+`createCustomerPolicyTokenProvider` (requires a customer CSRF source).
+See [adapter usage and security limits](https://github.com/bugdrophq/bugdrop-sdk-typescript/blob/main/docs/adapter.md).

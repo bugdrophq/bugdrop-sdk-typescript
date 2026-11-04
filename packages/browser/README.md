@@ -65,3 +65,13 @@ The browser loader does not verify the issuer confirmation or implement the host
 widget's submission transport. P1/P3 backend integration and qualified V2 verifier
 and hosted-fallback rollout remain separate prerequisites. Loading this entrypoint
 alone does not establish usable V2 service support or authorize publication.
+
+## Managed capability adapters
+
+Use `createCapabilityHandler` from `@bugdrop/server/adapter` for a Node20+ Web
+Request/Response handler or `createNodeCapabilityHandler` from `@bugdrop/server/node`
+for native Node streams. Select explicit anonymous or customer-policy mode and enable
+with literal `true`. Both default to `/api/bugdrop-capability/v1/` and managed production
+admission. The browser exports `createAnonymousTokenProvider` and
+`createCustomerPolicyTokenProvider` (requires a customer CSRF source).
+See [adapter usage and security limits](https://github.com/bugdrophq/bugdrop-sdk-typescript/blob/main/docs/adapter.md).

@@ -6,6 +6,9 @@ export default defineConfig({
       '@bugdrop/browser': new URL('./packages/browser/src/index.ts', import.meta.url).pathname,
       '@bugdrop/server/opt-in': new URL('./packages/server/src/opt-in.ts', import.meta.url)
         .pathname,
+      '@bugdrop/server/adapter': new URL('./packages/server/src/adapter.ts', import.meta.url)
+        .pathname,
+      '@bugdrop/server/node': new URL('./packages/server/src/node.ts', import.meta.url).pathname,
       '@bugdrop/server': new URL('./packages/server/src/index.ts', import.meta.url).pathname,
     },
   },
