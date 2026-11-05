@@ -17,7 +17,7 @@ before(async () => {
 after(async () => consumer?.close());
 
 test('current packed candidate cannot use the default frozen HTTP fixture', async () => {
-  assert.equal(consumer.versions.server, '0.2.0');
+  assert.equal(consumer.versions.server, '0.2.1');
   const binding = fixtures['submission-binding'].bound;
   const local = await providerObserverFixture(target, binding.payloadDigest);
   const service = await local.provider.startSafetyScenario({ scenario: 'origin-aliases', runId });
@@ -56,7 +56,7 @@ test('candidate HTTP transport does not inherit frozen signed-observer qualifica
       (await client.createSubmissionToken({ ...binding, origin: target.origin })).schemaVersion,
       1
     );
-    assert.equal(local.records[0].observer.state.exchanges[0].sdkVersion, '0.2.0');
+    assert.equal(local.records[0].observer.state.exchanges[0].sdkVersion, '0.2.1');
     await assert.rejects(service.readExchangeCount(), /staging_observation_incomplete/);
     await assert.rejects(
       service.evidence({ sdkAttemptTranscript: { scenario: 'origin-aliases' } }),

@@ -115,7 +115,7 @@ export function createCapabilityHandler(options: CapabilityHandlerOptions) {
         const capability = await client.createSubmissionToken({
           ...binding,
           origin,
-          environment: options.environment ?? 'production',
+          ...(options.environment === undefined ? {} : { environment: options.environment }),
           signal: controller.signal,
         });
         check();

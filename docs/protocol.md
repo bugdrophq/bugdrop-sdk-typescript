@@ -287,7 +287,10 @@ stalls. Tests exercise the real SDK authentication and managed-v1 confirmation w
 credentials and responses; no provider or live report is required.
 
 New adapters default to the trailing-slash `/api/bugdrop-capability/v1/`, managed issuer
-`https://managed.bugdrop.dev/v1/submission-capabilities`, and `production` environment.
+`https://managed.bugdrop.dev/v1/submission-capabilities`. Server adapter 0.2.1 omits the optional
+environment constraint unless explicitly configured, matching the underlying client. An explicit
+constraint must exactly match authoritative scope; null scope requires omission. Deployment
+environment names do not select authorization scope.
 Existing reference examples retain their own paths and defaults. Native Node raw envelopes
 are checked before adapting to the Web interface. Portable interfaces do not imply edge
 runtime support: Node20+ and Node crypto are required. See [adapter details](./adapter.md).

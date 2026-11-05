@@ -16,7 +16,6 @@ describe('managed capability Web adapter', () => {
       schemaVersion: 1,
       ...binding,
       origin,
-      environment: 'production',
       admission: 'managed-v1',
     });
   });
