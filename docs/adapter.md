@@ -91,8 +91,11 @@ stored by these providers. Browser fetches reject redirects.
 
 The server requires `enabled === true` and otherwise returns 404/no-store before body reads or
 client initialization. It always requests and requires confirmation of `managed-v1` admission.
-Its endpoint defaults to `https://managed.bugdrop.dev/v1/submission-capabilities` and environment
-to `production`; explicit overrides are server configuration. It makes one exchange, with no retries.
+Its endpoint defaults to `https://managed.bugdrop.dev/v1/submission-capabilities`.
+The optional `environment` constraint is omitted unless explicitly configured. Supply it only
+when it exactly matches the environment assigned by the capability service; a production
+deployment does not imply a `production` authorization environment. A null authority environment
+requires omission. It makes one exchange, with no retries.
 The total server deadline is 18 seconds, covering body, policy, client authentication, exchange and
 response reading, even if asynchronous dependencies ignore abort. A final transport guard prevents
 late issuer contact after cancellation. JavaScript must yield for timers to run.
