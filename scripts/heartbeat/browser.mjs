@@ -18,55 +18,64 @@ export async function runBrowser(target, password, evidence, browserType = chrom
     let violation = false;
     const feedback = feedbackFor(target);
     await context.route('**/*', async (route) => {
-      const request = route.request();
-      const url = request.url();
-      const origin = new URL(url).origin;
-      const allowed =
-        origin === target.fixtureOrigin || url === target.widgetUrl || url === target.submissionUrl;
-      if (!allowed) {
-        violation = true;
-        return route.abort();
-      }
-      if (url === `${target.fixtureOrigin}/fixture.js` || url === target.widgetUrl) {
-        const response = await route.fetch({ maxRedirects: 0 });
-        const bytes = await response.body();
-        const expected =
-          url === target.widgetUrl ? target.widgetSha256 : target.fixtureBundleSha256;
-        if (response.status() !== 200 || sha256(bytes) !== expected) {
+      try {
+        const request = route.request();
+        const url = request.url();
+        const origin = new URL(url).origin;
+        const allowed =
+          origin === target.fixtureOrigin ||
+          url === target.widgetUrl ||
+          url === target.submissionUrl;
+        if (!allowed) {
           violation = true;
           return route.abort();
         }
-        if (url === target.widgetUrl) widgetMatched = true;
-        else fixtureMatched = true;
-        return route.fulfill({ response });
-      }
-      if (
-        request.method() === 'POST' &&
-        url === `${target.fixtureOrigin}/api/bugdrop-capability/v1`
-      ) {
-        authorizations++;
-        if (authorizations !== 1) {
-          violation = true;
-          return route.abort();
+        if (url === `${target.fixtureOrigin}/fixture.js` || url === target.widgetUrl) {
+          const response = await route.fetch({ maxRedirects: 0 });
+          const bytes = await response.body();
+          const expected =
+            url === target.widgetUrl ? target.widgetSha256 : target.fixtureBundleSha256;
+          if (response.status() !== 200 || sha256(bytes) !== expected) {
+            violation = true;
+            return route.abort();
+          }
+          if (url === target.widgetUrl) widgetMatched = true;
+          else fixtureMatched = true;
+          return route.fulfill({ response });
         }
-        const binding = request.postDataJSON();
-        evidence.submissionId = binding.submissionId;
-      }
-      if (request.method() === 'POST' && url === target.submissionUrl) {
-        posts++;
-        const binding = request.headers()['x-bugdrop-submission-id'];
         if (
-          posts !== 1 ||
-          authorizations !== 1 ||
-          binding !== evidence.submissionId ||
-          JSON.stringify(request.postDataJSON()) !== JSON.stringify(feedback)
+          request.method() === 'POST' &&
+          url === `${target.fixtureOrigin}/api/bugdrop-capability/v1`
         ) {
-          violation = true;
-          return route.abort();
+          authorizations++;
+          if (authorizations !== 1) {
+            violation = true;
+            return route.abort();
+          }
+          const binding = request.postDataJSON();
+          evidence.submissionId = binding.submissionId;
         }
-        evidence.postValidated = true;
+        if (request.method() === 'POST' && url === target.submissionUrl) {
+          posts++;
+          const binding = request.headers()['x-bugdrop-submission-id'];
+          if (
+            posts !== 1 ||
+            authorizations !== 1 ||
+            binding !== evidence.submissionId ||
+            JSON.stringify(request.postDataJSON()) !== JSON.stringify(feedback)
+          ) {
+            violation = true;
+            return route.abort();
+          }
+          evidence.postValidated = true;
+        }
+        return route.continue();
+      } catch {
+        // Route callbacks are dispatched as events, outside the awaited page flow.
+        // Abort locally so network/JSON/read errors become an inconclusive browser run.
+        violation = true;
+        await route.abort().catch(() => {});
       }
-      return route.continue();
     });
     await page.goto(target.fixtureOrigin, { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Password', { exact: true }).fill(password);

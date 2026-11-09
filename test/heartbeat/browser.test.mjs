@@ -60,3 +60,43 @@ test('submit click failure does not leave an unhandled response waiter', async (
   await assert.rejects(runBrowser(target, 'synthetic-password', {}, browserType), /click failed/);
   await new Promise((resolve) => setImmediate(resolve));
 });
+
+test('script-fetch rejection is caught inside the event-driven route handler', async () => {
+  let handler;
+  let aborted = false;
+  const target = { fixtureOrigin: 'https://sdk-heartbeat.example' };
+  const route = {
+    request: () => ({ url: () => `${target.fixtureOrigin}/fixture.js` }),
+    fetch: async () => {
+      throw new Error('Connection reset');
+    },
+    abort: async () => {
+      aborted = true;
+    },
+  };
+  const page = {
+    setDefaultTimeout() {},
+    goto: async () => {
+      // Like Playwright's dispatcher, this task is independent of the awaited navigation.
+      void handler(route);
+      await new Promise((resolve) => setImmediate(resolve));
+      throw new Error('Navigation aborted');
+    },
+  };
+  const browserType = {
+    launch: async () => ({
+      newContext: async () => ({
+        newPage: async () => page,
+        route: async (_pattern, callback) => {
+          handler = callback;
+        },
+      }),
+      close: async () => {},
+    }),
+  };
+  await assert.rejects(
+    runBrowser(target, 'synthetic-password', {}, browserType),
+    /Navigation aborted/
+  );
+  assert.equal(aborted, true);
+});
