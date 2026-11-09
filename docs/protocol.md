@@ -301,3 +301,19 @@ normalizes to `null` under that catalog. The frozen observer/safety/receipt cont
 requires `0.1.0`; [local versioned tests](./staging.md#versioned-local-test-coverage) retain a
 checksummed real `0.1.0` package and independently exercise the current candidate's rejection.
 Neither local fixture selection nor a package version transfers production qualification.
+
+## SDK heartbeat monitoring boundary
+
+The optional [SDK heartbeat](sdk-heartbeat.md) exercises the existing authenticated fixture and
+managed V1 submission contract. It reuses reviewed widget GitHub monitoring helpers at
+`92dc85d8695d0c0be69af8110081ba9d48b0088a`, but does not reuse the legacy `/api/feedback` browser
+runner or its synchronous Issue response. Success requires a validated one-shot managed submission,
+a delivered receipt, independent issue verification and scoped cleanup. Private fixture identity
+is additive and disabled unless HEARTBEAT_BUILD is configured; ordinary V1 wire contracts and
+historical fixture operation are unchanged. The four-field v1 monitoring outcome goes only to
+`/api/monitor/sdk-heartbeat` with a distinct secret; it cannot establish script-tag service health.
+
+The managed bootstrap at the pinned widget commit derives `/v1/submissions` from the script URL's
+origin. The browser loader supplies no independent submission-endpoint override. Heartbeat target
+validation and its endpoint regression test preserve this boundary for both approved managed widget
+origins; configuring one origin for the widget and another for submissions must fail before login.

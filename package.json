@@ -31,7 +31,7 @@
     "test:coverage": "vitest run --coverage",
     "test:security": "npm run build && node scripts/verify-browser-boundary.mjs",
     "typecheck": "tsc --project tsconfig.test.json --noEmit",
-    "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check && node scripts/integration.mjs && npm run test:staging:unit",
+    "validate": "npm run check && npm run test:coverage && npm run test:security && npm run pack:check && node scripts/integration.mjs && npm run test:staging:unit && npm run test:heartbeat:unit",
     "test:integration": "npm run build && node scripts/integration.mjs",
     "test:integration:service": "npm run build && node scripts/integration.mjs --service",
     "test:staging": "npm run build && node scripts/staging.mjs",
@@ -41,10 +41,13 @@
     "example:hosted:build": "npm run build && esbuild examples/hosted-fixture/client.ts --bundle --format=iife --target=es2022 --outfile=examples/hosted-fixture/public/fixture.js",
     "example:hosted:dry-run": "npm run example:hosted:build && npm --prefix examples/hosted-fixture run dry-run",
     "beta:bundle": "node scripts/beta-bundle.mjs",
-    "beta:check": "node scripts/check-beta-bundle.mjs"
+    "beta:check": "node scripts/check-beta-bundle.mjs",
+    "heartbeat:run": "node scripts/heartbeat.mjs",
+    "test:heartbeat:unit": "node --test test/heartbeat/*.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.62.1",
     "@types/node": "22.20.2",
     "@vitest/coverage-v8": "4.1.12",
     "esbuild": "0.28.2",

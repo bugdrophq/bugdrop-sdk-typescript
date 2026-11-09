@@ -28,6 +28,13 @@ function safeConfig(env: FixtureEnv): boolean {
   try {
     if (env.FIXTURE_ENABLED !== 'true' || ![undefined, '1'].includes(env.SELF_SERVICE_BINDING))
       return false;
+    if (
+      env.HEARTBEAT_BUILD &&
+      (!/^[a-f0-9]{40}$/.test(env.HEARTBEAT_BUILD) ||
+        env.CAPABILITY_SERVICE ||
+        env.SELF_SERVICE_BINDING)
+    )
+      return false;
     const origin = new URL(env.FIXTURE_ORIGIN);
     const widget = new URL(env.WIDGET_URL);
     const issuer = new URL(env.BUGDROP_CAPABILITY_ENDPOINT);
@@ -170,6 +177,21 @@ export default {
     if (url.origin !== env.FIXTURE_ORIGIN || url.search || url.hash) return denied();
     const stub = env.FIXTURE_STATE.get(env.FIXTURE_STATE.idFromName('global-v1'));
     const id = sessionId(request.headers.get('Cookie'));
+    if (request.method === 'GET' && url.pathname === '/heartbeat-identity' && env.HEARTBEAT_BUILD) {
+      const session = id ? await callState(stub, '/session', { sessionId: id }) : null;
+      if (typeof session?.csrf !== 'string') return denied();
+      return Response.json(
+        {
+          schemaVersion: 1,
+          sdkCommit: env.HEARTBEAT_BUILD,
+          applicationId: env.APPLICATION_ID,
+          widgetUrl: env.WIDGET_URL,
+          issuerUrl: env.BUGDROP_CAPABILITY_ENDPOINT,
+          transport: 'public-https',
+        },
+        { headers: JSON_HEADERS }
+      );
+    }
     if (request.method === 'POST' && url.pathname === '/backend-binding') {
       const session = id ? await callState(stub, '/session', { sessionId: id }) : null;
       return saveBackendBinding(
