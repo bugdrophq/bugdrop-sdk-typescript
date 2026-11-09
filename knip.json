@@ -17,7 +17,8 @@
         "examples/beta-consumer/browser.ts",
         "examples/beta-consumer/server.ts",
         "examples/anonymous-consumer/server.ts",
-        "examples/anonymous-consumer/browser.ts"
+        "examples/anonymous-consumer/browser.ts",
+        "test/heartbeat/*.test.mjs"
       ],
       "project": [
         "scripts/**/*.mjs",
@@ -28,7 +29,8 @@
         "examples/v1-backend/*.ts",
         "examples/hosted-fixture/*.ts",
         "examples/beta-consumer/*.ts",
-        "examples/anonymous-consumer/*.ts"
+        "examples/anonymous-consumer/*.ts",
+        "test/heartbeat/**/*.mjs"
       ]
     },
     "packages/browser": {

@@ -23,6 +23,7 @@ interface FixtureNamespace {
 
 export interface FixtureEnv {
   SELF_SERVICE_BINDING?: string;
+  HEARTBEAT_BUILD?: string;
   FIXTURE_ENABLED: string;
   FIXTURE_ORIGIN: string;
   APPLICATION_ID: string;

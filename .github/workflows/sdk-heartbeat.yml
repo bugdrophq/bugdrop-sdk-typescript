@@ -1,0 +1,81 @@
+name: SDK production heartbeat
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 3 * * *'
+permissions: {}
+concurrency:
+  group: sdk-production-heartbeat
+  cancel-in-progress: false
+jobs:
+  heartbeat:
+    # Missing mode means OFF, including manual dispatch. No PR/merge or fork execution.
+    if: >-
+      github.repository == 'bugdrophq/bugdrop-sdk-typescript' &&
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'workflow_dispatch' &&
+        (vars.BUGDROP_SDK_HEARTBEAT_MODE == 'manual' || vars.BUGDROP_SDK_HEARTBEAT_MODE == 'daily')) ||
+       (github.event_name == 'schedule' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'daily'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: sdk-heartbeat
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.3
+          cache: npm
+      - run: npx --yes npm@11.19.1 ci --ignore-scripts
+      - name: Checkout pinned widget monitoring helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bugdrophq/bugdrop
+          ref: 92dc85d8695d0c0be69af8110081ba9d48b0088a
+          path: .heartbeat-helpers
+          persist-credentials: false
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate dedicated scope before minting the monitoring token
+        id: target
+        env:
+          BUGDROP_SDK_HEARTBEAT_ENABLED: '1'
+          BUGDROP_SDK_HEARTBEAT_TARGET: ${{ vars.BUGDROP_SDK_HEARTBEAT_TARGET }}
+          BUGDROP_SDK_FIXTURE_PASSWORD: ${{ secrets.BUGDROP_SDK_FIXTURE_PASSWORD }}
+          MONITOR_SDK_HEARTBEAT_SECRET: ${{ secrets.MONITOR_SDK_HEARTBEAT_SECRET }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { readConfiguration } from './scripts/heartbeat/config.mjs';
+          try {
+            const target = readConfiguration(process.env);
+            const [owner, repository] = target.repository.split('/');
+            appendFileSync(process.env.GITHUB_OUTPUT, `owner=${owner}\nrepository=${repository}\n`);
+          } catch {
+            process.stderr.write('SDK heartbeat scope is missing or invalid.\n');
+            process.exitCode = 1;
+          }
+          NODE
+      - name: Mint monitoring-only token for the synthetic issue repository
+        id: monitor
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.SDK_HEARTBEAT_MONITOR_APP_ID }}
+          private-key: ${{ secrets.SDK_HEARTBEAT_MONITOR_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repository }}
+          permission-issues: write
+      - name: One SDK transaction, independent verification, cleanup and isolated status
+        env:
+          BUGDROP_SDK_HEARTBEAT_ENABLED: '1'
+          BUGDROP_SDK_HEARTBEAT_TARGET: ${{ vars.BUGDROP_SDK_HEARTBEAT_TARGET }}
+          BUGDROP_WIDGET_HELPERS: ${{ github.workspace }}/.heartbeat-helpers
+          BUGDROP_SDK_FIXTURE_PASSWORD: ${{ secrets.BUGDROP_SDK_FIXTURE_PASSWORD }}
+          MONITOR_SDK_HEARTBEAT_SECRET: ${{ secrets.MONITOR_SDK_HEARTBEAT_SECRET }}
+          GH_MONITOR_TOKEN: ${{ steps.monitor.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run heartbeat:run

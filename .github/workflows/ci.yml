@@ -70,6 +70,9 @@ jobs:
       - name: Verify fail-closed staging gate
         run: npm run test:staging:unit
 
+      - name: Verify offline SDK heartbeat regressions (no live traffic)
+        run: npm run test:heartbeat:unit
+
       - name: Verify publishable package contents
         run: npm run pack:check
 
