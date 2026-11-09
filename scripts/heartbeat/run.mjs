@@ -26,6 +26,7 @@ export async function runHeartbeat(
   const evidence = { postValidated: false };
   let report;
   let cleanupOkay = true;
+  let verifiedIssueNumber;
   try {
     // Do not sweep any old marker or another application's reports.
     const old = await helpers.listMatchingIssues({
@@ -55,6 +56,7 @@ export async function runHeartbeat(
       if (attempt < 5) await sleep(2000);
     }
     const code = !stable && sawMatch ? 'inconclusive' : verifyIssue(issues, target, evidence);
+    if (code === 'issue_verified') verifiedIssueNumber = issues[0].number;
     report =
       code === 'issue_verified'
         ? result('verified', code)
@@ -66,7 +68,18 @@ export async function runHeartbeat(
   } finally {
     if (evidence.postValidated) {
       try {
-        await helpers.closeMatchingIssues({ ...options, marker: target.marker });
+        const cleanup = await helpers.closeMatchingIssues({ ...options, marker: target.marker });
+        if (report.outcome === 'verified') {
+          if (cleanup.matchedNumbers.length > 1) {
+            report = result('delivery_failed', 'issue_duplicate');
+          } else if (
+            cleanup.matchedNumbers.length !== 1 ||
+            cleanup.matchedNumbers[0] !== verifiedIssueNumber ||
+            cleanup.openNumbers.length !== 0
+          ) {
+            cleanupOkay = false;
+          }
+        }
       } catch {
         cleanupOkay = false;
       }

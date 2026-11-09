@@ -90,6 +90,7 @@ async function exercise({
   issues = [issue],
   browserError = false,
   cleanupError = false,
+  cleanupMatches = issues.map((issue) => issue.number),
   incidentError = false,
   existing = [],
 } = {}) {
@@ -98,7 +99,8 @@ async function exercise({
     listMatchingIssues: async (options) => (options.prefix ? existing : issues),
     closeMatchingIssues: async (options) => {
       calls.cleaned.push(options);
-      if (cleanupError) throw new Error('cleanup');
+      if (cleanupError || !cleanupMatches.length) throw new Error('cleanup');
+      return { matchedNumbers: cleanupMatches, closedNumbers: cleanupMatches, openNumbers: [] };
     },
     transitionHeartbeatIncident: async (options) => {
       calls.incidents.push(options);
@@ -229,4 +231,17 @@ test('managed submission endpoint follows script origin, not a separate delivery
       }),
     })
   );
+});
+
+test('duplicates first visible during cleanup prevent recovery and remain confirmed failures', async () => {
+  const result = await exercise({ cleanupMatches: [1, 2] });
+  assert.equal(result.passed, false);
+  assert.equal(result.report.outcome, 'delivery_failed');
+  assert.equal(result.report.reasonCode, 'issue_duplicate');
+  assert.equal(result.calls.incidents[0].outcome, 'failure');
+});
+test('cleanup must corroborate the same verified issue before a healthy result', async () => {
+  const result = await exercise({ cleanupMatches: [2] });
+  assert.equal(result.passed, false);
+  assert.equal(result.report.outcome, 'inconclusive');
 });
