@@ -9,12 +9,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   heartbeat:
-    # Missing mode means OFF, including manual dispatch. No PR/merge or fork execution.
+    # Run the selected trigger on protected main, once per workflow run.
     if: >-
       github.repository == 'bugdrophq/bugdrop-sdk-typescript' &&
       github.ref == 'refs/heads/main' &&
-      ((github.event_name == 'workflow_dispatch' &&
-        (vars.BUGDROP_SDK_HEARTBEAT_MODE == 'manual' || vars.BUGDROP_SDK_HEARTBEAT_MODE == 'daily')) ||
+      github.run_attempt == '1' &&
+      ((github.event_name == 'workflow_dispatch' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'manual') ||
        (github.event_name == 'schedule' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'daily'))
     runs-on: ubuntu-latest
     timeout-minutes: 15

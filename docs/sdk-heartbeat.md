@@ -43,13 +43,15 @@ and report; they never repeat the feedback submission.
 
 ## Configuration and rollout boundary
 
-The new workflow runs only on protected main in this repository. `BUGDROP_SDK_HEARTBEAT_MODE`
-must explicitly be `manual` or `daily`; absence is off even for manual dispatch. Daily mode schedules
-one run at03:23UTC. Configure the `sdk-heartbeat` GitHub environment's protections before activation.
+The workflow runs only on protected main in this repository. Manual dispatch requires
+`BUGDROP_SDK_HEARTBEAT_MODE=manual`, and the 03:23 UTC schedule requires `daily`. An unset or
+other mode skips both triggers. Reruns skip the transaction. Configure the
+`sdk-heartbeat` GitHub environment's protections before activation.
 Use a separate synthetic Application, exact approved origin and issue repository, plus normal
 managed reporting authorization and budget. One scheduled run may spend one report attempt;
-cleanup does not refund it. Account for manual runs and shared workspace quota. Never exempt or
-reset the ledger to make monitoring pass.
+cleanup does not refund it. Start daily mode in a later quota day than the manual verification.
+The delivery quota still applies if a scheduled job starts late. Never exempt or reset the
+ledger to make monitoring pass.
 
 `BUGDROP_SDK_HEARTBEAT_TARGET` is an exact JSON object with these fields:
 
