@@ -163,7 +163,11 @@ test('workflow is inert without an exact opt-in and never runs on PRs or forks',
   );
   assert.deepEqual(Object.keys(workflow.on).sort(), ['schedule', 'workflow_dispatch']);
   assert.deepEqual(workflow.permissions, {});
-  assert.match(workflow.jobs.heartbeat.if, /BUGDROP_SDK_HEARTBEAT_MODE == 'daily'/);
+  assert.match(
+    workflow.jobs.heartbeat.if,
+    /\(\(github\.event_name == 'workflow_dispatch' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'manual'\) \|\|\s+\(github\.event_name == 'schedule' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'daily'\)\)$/
+  );
+  assert.match(workflow.jobs.heartbeat.if, /github\.run_attempt == '1' &&/);
   assert.match(workflow.jobs.heartbeat.if, /github.ref == 'refs\/heads\/main'/);
   assert.match(
     workflow.jobs.heartbeat.if,
