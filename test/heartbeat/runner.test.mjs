@@ -162,10 +162,11 @@ test('workflow is inert without an exact opt-in and never runs on PRs or forks',
     readFileSync(new URL('../../.github/workflows/sdk-heartbeat.yml', import.meta.url), 'utf8')
   );
   assert.deepEqual(Object.keys(workflow.on).sort(), ['schedule', 'workflow_dispatch']);
+  assert.deepEqual(workflow.on.schedule, [{ cron: '47 1/4 * * *' }]);
   assert.deepEqual(workflow.permissions, {});
   assert.match(
     workflow.jobs.heartbeat.if,
-    /\(\(github\.event_name == 'workflow_dispatch' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'manual'\) \|\|\s+\(github\.event_name == 'schedule' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'daily'\)\)$/
+    /\(\(github\.event_name == 'workflow_dispatch' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'manual'\) \|\|\s+\(github\.event_name == 'schedule' && vars\.BUGDROP_SDK_HEARTBEAT_MODE == 'four-hour'\)\)$/
   );
   assert.match(workflow.jobs.heartbeat.if, /github\.run_attempt == '1' &&/);
   assert.match(workflow.jobs.heartbeat.if, /github.ref == 'refs\/heads\/main'/);

@@ -2,7 +2,7 @@ name: SDK production heartbeat
 on:
   workflow_dispatch:
   schedule:
-    - cron: '23 3 * * *'
+    - cron: '47 1/4 * * *'
 permissions: {}
 concurrency:
   group: sdk-production-heartbeat
@@ -15,7 +15,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.run_attempt == '1' &&
       ((github.event_name == 'workflow_dispatch' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'manual') ||
-       (github.event_name == 'schedule' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'daily'))
+       (github.event_name == 'schedule' && vars.BUGDROP_SDK_HEARTBEAT_MODE == 'four-hour'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: sdk-heartbeat
