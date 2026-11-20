@@ -2,7 +2,7 @@ name: SDK production heartbeat
 on:
   workflow_dispatch:
   schedule:
-    - cron: '39 18 19 11 *'
+    - cron: '23 3 * * *'
 permissions: {}
 concurrency:
   group: sdk-production-heartbeat
