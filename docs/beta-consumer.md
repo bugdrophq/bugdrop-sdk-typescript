@@ -1,18 +1,18 @@
 # Private hosted V1 consumer
 
-This bundle uses the ordinary V1 public exports. V2 activation is not a prerequisite. Packages
-remain unpublished previews; matching `0.1.0` versions alone do not identify a release candidate.
-Use the full source commit and `provenance.json` SHA-256 values to identify the exact files.
+This bundle uses the ordinary V1 exports. The packages are unpublished previews. Use the full
+source commit and `provenance.json` SHA-256 values to identify the exact files. Read the two
+versioned tarball filenames from that manifest.
 
 ## Produce and install
 
 From a clean, committed SDK checkout using Node 22.22.3 and npm 11.19.1:
 
 ```sh
-npm ci
-npm run validate
-npm run beta:bundle
-npm run beta:check -- dist/beta-$(git rev-parse HEAD)
+npx --yes npm@11.19.1 ci
+npx --yes npm@11.19.1 run validate
+npx --yes npm@11.19.1 run beta:bundle
+npx --yes npm@11.19.1 run beta:check -- "dist/beta-$(git rev-parse HEAD)"
 ```
 
 The command builds and packs both packages into `dist/beta-<full-commit>/vendor`, copies the
@@ -27,8 +27,8 @@ verify every listed SHA-256. A manifest shipped beside modified files alone is n
 Inside a fresh copy outside the SDK workspace:
 
 ```sh
-npm ci
-npm run build
+npx --yes npm@11.19.1 ci
+npx --yes npm@11.19.1 run build
 ```
 
 Keep `vendor`, `package.json` and `package-lock.json` in the customer's private build inputs. The

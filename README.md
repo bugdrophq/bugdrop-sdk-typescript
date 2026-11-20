@@ -7,9 +7,9 @@ is an additional installation method; BugDrop's direct script-tag installation r
 - `@bugdrop/server` exchanges a server-only Application credential for a short-lived submission
   capability after your application applies its own access controls.
 
-This repository is an early, non-published foundation. The capability service and the
-Application-aware hosted widget must ship before these packages are production-ready. The seams for
-both are implemented and tested without embedding a mock control plane in either package.
+The packages are unpublished previews for approved integrations. The
+[private V1 beta bundle](docs/beta-consumer.md) is the installation path for invited testers.
+Confirm hosted delivery readiness for the specific Application with your beta operator.
 
 ## Security model
 

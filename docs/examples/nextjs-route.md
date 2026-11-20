@@ -7,30 +7,24 @@ particular Application is ready to send.
 
 ## 1. Pin and install both packages
 
-Check out the SDK revision agreed with the dogfood operator. In that checkout:
+Use the commit-pinned [private SDK bundle](../beta-consumer.md) supplied by your beta operator.
+Verify its `provenance.json` against the independently supplied manifest and check the listed
+SHA-256 hashes. Use both tarballs and helper files from that one bundle. The manifest lists the
+actual filenames, which can change between revisions.
+
+From the root of your Next.js app, put the two verified tarballs in a new, empty
+`vendor/bugdrop/` directory. Install them from paths relative to that root:
 
 ```sh
-npm ci
-npm run build
-mkdir -p artifacts
-npm pack -w @bugdrop/browser --pack-destination artifacts
-npm pack -w @bugdrop/server --pack-destination artifacts
+npm install ./vendor/bugdrop/bugdrop-browser-*.tgz ./vendor/bugdrop/bugdrop-server-*.tgz
 ```
 
-In your Next.js project, install those exact tarballs and commit the resulting lockfile:
+Keep the two tarballs in the private build inputs alongside `package.json` and `package-lock.json`.
+The dependencies should resolve to `file:vendor/bugdrop/...` so that a clean checkout or remote
+builder can use `npm ci`. Record the verified source commit with those artifacts. Both packages
+include their compiled contract code.
 
-```sh
-npm install /absolute/path/to/sdk/artifacts/bugdrop-browser-0.1.0.tgz \
-  /absolute/path/to/sdk/artifacts/bugdrop-server-0.1.0.tgz
-```
-
-Keep the tarballs available to your build system; an absolute local dependency path alone will not
-work on a remote builder. Record the source commit alongside the artifacts, since preview builds can
-share a package version. The packages include their compiled contract code; no contracts package
-needs to be installed separately. No command above publishes either package.
-
-Copy `examples/v1-backend/handler.ts` and `transport.ts` from the **same revision** into
-`src/lib/bugdrop/` in your application. These helpers are example source, not package exports.
+Copy `src/handler.ts` and `src/transport.ts` from the bundle into `src/lib/bugdrop/` in your app.
 Keep `handler.ts` in the server import graph and import only `transport.ts` from browser code.
 
 ## 2. Configure the existing Application
