@@ -44,14 +44,16 @@ and report; they never repeat the feedback submission.
 ## Configuration and rollout boundary
 
 The workflow runs only on protected main in this repository. Manual dispatch requires
-`BUGDROP_SDK_HEARTBEAT_MODE=manual`, and the 03:23 UTC schedule requires `daily`. An unset or
-other mode skips both triggers. Reruns skip the transaction. Configure the
-`sdk-heartbeat` GitHub environment's protections before activation.
+`BUGDROP_SDK_HEARTBEAT_MODE=manual`. Scheduled runs require `four-hour` and use the same
+`47 1/4 * * *` UTC cron as the hosted widget. An unset or other mode skips both triggers.
+Reruns skip the transaction. Configure the `sdk-heartbeat` GitHub environment's protections
+before activation.
+
 Use a separate synthetic Application, exact approved origin and issue repository, plus normal
-managed reporting authorization and budget. One scheduled run may spend one report attempt;
-cleanup does not refund it. Start daily mode in a later quota day than the manual verification.
-The delivery quota still applies if a scheduled job starts late. Never exempt or reset the
-ledger to make monitoring pass.
+managed reporting authorization. The synthetic delivery budget is six attempts per Phoenix day.
+One run may spend one attempt. Both manual and scheduled runs count against that allowance on
+the day they execute, including delayed runs. Cleanup does not refund attempts. Verify quota
+headroom before enabling the schedule and preserve the ledger.
 
 `BUGDROP_SDK_HEARTBEAT_TARGET` is an exact JSON object with these fields:
 
@@ -72,7 +74,7 @@ The SDK root stays in the fixture's server-only deployment settings, never in Ac
 The web companion adds `/api/monitor/sdk-heartbeat`, gated by `MONITOR_SDK_HEARTBEAT_ENABLED=1`,
 with a distinct secret and separate persistence. Leave both ends off until its additive monitoring
 schema, receiver, fixture artifacts, exact bindings, authorization and quota are reviewed and read
-back. Then separately authorize one manual acceptance run before enabling daily mode. Reuse the
+back. Then separately authorize one manual acceptance run before enabling scheduled mode. Reuse the
 existing lifecycle, isolation and pilot delivery proofs; no reset or rotation campaign is required.
 
 Rollback is to set the workflow mode off and disable the SDK receiver/component, then normally
