@@ -88,13 +88,13 @@ test('success needs a validated single post, receipt and independent exact issue
 
 async function exercise({
   issues = [issue],
-  browserError = false,
+  browser = async (_target, _password, result) => Object.assign(result, evidence),
   cleanupError = false,
   cleanupMatches = issues.map((issue) => issue.number),
   incidentError = false,
   existing = [],
 } = {}) {
-  const calls = { cleaned: [], incidents: [], sent: [] };
+  const calls = { browser: 0, cleaned: [], incidents: [], sent: [] };
   const helpers = {
     listMatchingIssues: async (options) => (options.prefix ? existing : issues),
     closeMatchingIssues: async (options) => {
@@ -110,16 +110,21 @@ async function exercise({
       calls.sent.push(options);
     },
   };
-  const browser = async (_target, _password, result) => {
-    if (browserError) throw new Error('unknown');
-    Object.assign(result, evidence);
+  const countedBrowser = (...args) => {
+    calls.browser++;
+    return browser(...args);
   };
-  return { ...(await runHeartbeat(configured, env, helpers, browser, async () => {})), calls };
+  return {
+    ...(await runHeartbeat(configured, env, helpers, countedBrowser, async () => {})),
+    calls,
+  };
 }
 
-test('reuses helpers with exact scoped cleanup, SDK incident destination and separate receiver', async () => {
+test('reuses helpers with exact scoped cleanup, SDK incident destination and separate receiver', async (t) => {
+  const diagnostic = t.mock.method(console, 'error', () => {});
   const result = await exercise();
   assert.equal(result.passed, true);
+  assert.equal(diagnostic.mock.callCount(), 0);
   assert.equal(result.calls.cleaned[0].marker, configured.marker);
   assert.equal(result.calls.cleaned[0].prefix, undefined);
   assert.equal(result.calls.incidents[0].repo, 'bugdrophq/bugdrop-sdk-typescript');
@@ -131,11 +136,51 @@ test('reuses helpers with exact scoped cleanup, SDK incident destination and sep
     'schemaVersion',
   ]);
 });
-test('unknown delivery never resends or reports healthy, even when an issue exists', async () => {
-  const result = await exercise({ browserError: true });
+test('an unrecognized browser phase cannot enter the diagnostic', async (t) => {
+  const diagnostic = t.mock.method(console, 'error', () => {});
+  const result = await exercise({
+    browser: async (_target, _password, result) => {
+      result.browserPhase = 'fake secret\nraw response body';
+      throw new Error(result.browserPhase);
+    },
+  });
   assert.equal(result.passed, false);
   assert.equal(result.report.outcome, 'inconclusive');
   assert.equal(result.calls.cleaned.length, 0);
+  assert.deepEqual(
+    diagnostic.mock.calls.map(({ arguments: args }) => args),
+    [['[sdk-heartbeat] inconclusive phase=browser_unknown']]
+  );
+});
+
+test('an uncertain validated POST logs only its phase and keeps the same cleanup and status', async (t) => {
+  const diagnostic = t.mock.method(console, 'error', () => {});
+  const result = await exercise({
+    browser: async (_target, password, result) => {
+      result.browserPhase = 'submission_request';
+      result.postValidated = true;
+      result.submissionId = evidence.submissionId;
+      throw new Error(`${password} ${result.submissionId} ${feedback.description}`);
+    },
+  });
+  assert.deepEqual(
+    diagnostic.mock.calls.map(({ arguments: args }) => args),
+    [['[sdk-heartbeat] inconclusive phase=submission_request']]
+  );
+  assert.equal(result.passed, false);
+  assert.equal(result.calls.browser, 1);
+  assert.equal(result.calls.cleaned.length, 1);
+  assert.equal(result.calls.cleaned[0].repo, configured.repository);
+  assert.equal(result.calls.cleaned[0].marker, configured.marker);
+  assert.equal(result.calls.cleaned[0].prefix, undefined);
+  assert.equal(result.calls.incidents[0].outcome, 'inconclusive');
+  assert.equal(result.calls.sent.length, 1);
+  assert.deepEqual(result.calls.sent[0].report, {
+    schemaVersion: 1,
+    outcome: 'inconclusive',
+    reasonCode: 'browser_inconclusive',
+    observedAt: result.report.observedAt,
+  });
 });
 test('cleanup or incident failure prevents a green lifecycle result', async () => {
   for (const options of [{ cleanupError: true }, { incidentError: true }]) {
@@ -178,7 +223,8 @@ test('workflow is inert without an exact opt-in and never runs on PRs or forks',
 });
 
 // A transient final singleton is insufficient independent evidence for recovery.
-test('poll exhaustion never verifies an unstable issue listing', async () => {
+test('poll exhaustion never verifies an unstable issue listing', async (t) => {
+  const diagnostic = t.mock.method(console, 'error', () => {});
   for (const sequence of [
     [[], [], [], [], [], [issue]],
     [[], [issue], [], [issue], [], [issue]],
@@ -201,6 +247,10 @@ test('poll exhaustion never verifies an unstable issue listing', async () => {
     assert.equal(run.passed, false);
     assert.equal(calls, 6);
   }
+  assert.deepEqual(
+    diagnostic.mock.calls.map(({ arguments: args }) => args),
+    Array.from({ length: 3 }, () => ['[sdk-heartbeat] inconclusive phase=issue_verification'])
+  );
 });
 
 test('managed submission endpoint follows script origin, not a separate delivery override', () => {

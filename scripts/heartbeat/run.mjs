@@ -1,5 +1,5 @@
 import { profileEnvironment } from './config.mjs';
-import { runBrowser } from './browser.mjs';
+import { browserPhases, runBrowser } from './browser.mjs';
 import { verifyIssue } from './verify.mjs';
 
 const result = (outcome, reasonCode, observedAt = new Date().toISOString()) => ({
@@ -55,8 +55,16 @@ export async function runHeartbeat(
       previous = signature;
       if (attempt < 5) await sleep(2000);
     }
-    const code = !stable && sawMatch ? 'inconclusive' : verifyIssue(issues, target, evidence);
+    const unstableListing = !stable && sawMatch;
+    const code = unstableListing ? 'inconclusive' : verifyIssue(issues, target, evidence);
     if (code === 'issue_verified') verifiedIssueNumber = issues[0].number;
+    if (code === 'inconclusive') {
+      let phase = unstableListing ? 'issue_verification' : 'browser_unknown';
+      if (!unstableListing && browserPhases.includes(evidence.browserPhase)) {
+        phase = evidence.browserPhase;
+      }
+      console.error(`[sdk-heartbeat] inconclusive phase=${phase}`);
+    }
     report =
       code === 'issue_verified'
         ? result('verified', code)
