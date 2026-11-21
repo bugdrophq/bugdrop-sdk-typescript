@@ -4,7 +4,25 @@ import { feedbackFor } from './verify.mjs';
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
+export const browserPhases = Object.freeze([
+  'browser_launch',
+  'fixture_sign_in',
+  'fixture_identity',
+  'widget_load',
+  'submit_control',
+  'capability_request',
+  'submission_request',
+  'delivery_receipt',
+]);
+
 export async function runBrowser(target, password, evidence, browserType = chromium) {
+  const observePhase = (phase) => {
+    // Route callbacks can complete after the page has moved on.
+    if (browserPhases.indexOf(phase) > browserPhases.indexOf(evidence.browserPhase)) {
+      evidence.browserPhase = phase;
+    }
+  };
+  observePhase('browser_launch');
   const browser = await browserType.launch();
   try {
     const context = await browser.newContext({ serviceWorkers: 'block' });
@@ -47,6 +65,7 @@ export async function runBrowser(target, password, evidence, browserType = chrom
           request.method() === 'POST' &&
           url === `${target.fixtureOrigin}/api/bugdrop-capability/v1`
         ) {
+          observePhase('capability_request');
           authorizations++;
           if (authorizations !== 1) {
             violation = true;
@@ -56,6 +75,7 @@ export async function runBrowser(target, password, evidence, browserType = chrom
           evidence.submissionId = binding.submissionId;
         }
         if (request.method() === 'POST' && url === target.submissionUrl) {
+          observePhase('submission_request');
           posts++;
           const binding = request.headers()['x-bugdrop-submission-id'];
           if (
@@ -77,9 +97,11 @@ export async function runBrowser(target, password, evidence, browserType = chrom
         await route.abort().catch(() => {});
       }
     });
+    observePhase('fixture_sign_in');
     await page.goto(target.fixtureOrigin, { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    observePhase('fixture_identity');
     const identityResponse = await page.request.get(`${target.fixtureOrigin}/heartbeat-identity`, {
       maxRedirects: 0,
     });
@@ -105,10 +127,12 @@ export async function runBrowser(target, password, evidence, browserType = chrom
       (await open.getAttribute('data-widget')) !== target.widgetUrl
     )
       throw new Error('identity_failed');
+    observePhase('widget_load');
     await open.click();
     await page.locator('input[name="title"]').fill(feedback.title);
     await page.locator('textarea[name="description"]').fill(feedback.description);
     await page.locator('select[name="category"]').selectOption('bug');
+    observePhase('submit_control');
     const [response] = await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -117,6 +141,7 @@ export async function runBrowser(target, password, evidence, browserType = chrom
       ),
       page.locator('[data-role="feedback"] button[type="submit"]').click(),
     ]);
+    observePhase('delivery_receipt');
     const outcome = await response.json();
     if (
       !violation &&
