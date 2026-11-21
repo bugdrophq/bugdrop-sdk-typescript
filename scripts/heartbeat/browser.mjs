@@ -15,6 +15,15 @@ export const browserPhases = Object.freeze([
   'delivery_receipt',
 ]);
 
+export const receiptReasons = Object.freeze([
+  'response_unreadable',
+  'request_evidence_unverified',
+  'unexpected_http_status',
+  'unexpected_receipt_contract',
+  'confirmation_unverified',
+  'receipt_identity_unverified',
+]);
+
 export async function runBrowser(target, password, evidence, browserType = chromium) {
   const observePhase = (phase) => {
     // Route callbacks can complete after the page has moved on.
@@ -142,20 +151,19 @@ export async function runBrowser(target, password, evidence, browserType = chrom
       page.locator('[data-role="feedback"] button[type="submit"]').click(),
     ]);
     observePhase('delivery_receipt');
+    evidence.receiptReason = 'response_unreadable';
     const outcome = await response.json();
-    if (
-      !violation &&
-      widgetMatched &&
-      fixtureMatched &&
-      posts === 1 &&
-      authorizations === 1 &&
-      response.status() === 200 &&
-      outcome.schemaVersion === 1 &&
-      outcome.status === 'delivered'
-    ) {
-      await page.getByText('Feedback delivered.', { exact: true }).waitFor();
-      evidence.receiptId = outcome.receiptId;
-    }
+    evidence.receiptReason = 'request_evidence_unverified';
+    if (violation || !widgetMatched || !fixtureMatched || posts !== 1 || authorizations !== 1)
+      return;
+    evidence.receiptReason = 'unexpected_http_status';
+    if (response.status() !== 200) return;
+    evidence.receiptReason = 'unexpected_receipt_contract';
+    if (outcome.schemaVersion !== 1 || outcome.status !== 'delivered') return;
+    evidence.receiptReason = 'confirmation_unverified';
+    await page.getByText('Feedback delivered.', { exact: true }).waitFor();
+    evidence.receiptId = outcome.receiptId;
+    evidence.receiptReason = 'receipt_identity_unverified';
   } finally {
     await browser.close();
   }

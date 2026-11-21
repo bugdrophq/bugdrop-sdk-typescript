@@ -136,28 +136,33 @@ test('reuses helpers with exact scoped cleanup, SDK incident destination and sep
     'schemaVersion',
   ]);
 });
-test('an unrecognized browser phase cannot enter the diagnostic', async (t) => {
+test('unrecognized phases and receipt reasons cannot enter the diagnostic', async (t) => {
   const diagnostic = t.mock.method(console, 'error', () => {});
-  const result = await exercise({
-    browser: async (_target, _password, result) => {
-      result.browserPhase = 'fake secret\nraw response body';
-      throw new Error(result.browserPhase);
-    },
-  });
-  assert.equal(result.passed, false);
-  assert.equal(result.report.outcome, 'inconclusive');
-  assert.equal(result.calls.cleaned.length, 0);
+  const secret = 'fake secret\nraw response body';
+  for (const browserPhase of [secret, 'delivery_receipt']) {
+    const result = await exercise({
+      browser: async (_target, _password, result) =>
+        Object.assign(result, { browserPhase, receiptReason: secret }),
+    });
+    assert.equal(result.passed, false);
+    assert.equal(result.report.outcome, 'inconclusive');
+    assert.equal(result.calls.cleaned.length, 0);
+  }
   assert.deepEqual(
     diagnostic.mock.calls.map(({ arguments: args }) => args),
-    [['[sdk-heartbeat] inconclusive phase=browser_unknown']]
+    [
+      ['[sdk-heartbeat] inconclusive phase=browser_unknown'],
+      ['[sdk-heartbeat] inconclusive phase=delivery_receipt'],
+    ]
   );
 });
 
-test('an uncertain validated POST logs only its phase and keeps the same cleanup and status', async (t) => {
+test('an uncertain validated POST logs one fixed receipt reason and keeps cleanup and status', async (t) => {
   const diagnostic = t.mock.method(console, 'error', () => {});
   const result = await exercise({
     browser: async (_target, password, result) => {
-      result.browserPhase = 'submission_request';
+      result.browserPhase = 'delivery_receipt';
+      result.receiptReason = 'response_unreadable';
       result.postValidated = true;
       result.submissionId = evidence.submissionId;
       throw new Error(`${password} ${result.submissionId} ${feedback.description}`);
@@ -165,7 +170,7 @@ test('an uncertain validated POST logs only its phase and keeps the same cleanup
   });
   assert.deepEqual(
     diagnostic.mock.calls.map(({ arguments: args }) => args),
-    [['[sdk-heartbeat] inconclusive phase=submission_request']]
+    [['[sdk-heartbeat] inconclusive phase=delivery_receipt reason=response_unreadable']]
   );
   assert.equal(result.passed, false);
   assert.equal(result.calls.browser, 1);
@@ -241,7 +246,11 @@ test('poll exhaustion never verifies an unstable issue listing', async (t) => {
       configured,
       env,
       helpers,
-      async (_target, _password, result) => Object.assign(result, evidence),
+      async (_target, _password, result) =>
+        Object.assign(result, evidence, {
+          browserPhase: 'delivery_receipt',
+          receiptReason: 'receipt_identity_unverified',
+        }),
       async () => {}
     );
     assert.equal(run.passed, false);
