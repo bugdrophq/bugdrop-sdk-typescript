@@ -1,5 +1,5 @@
 import { profileEnvironment } from './config.mjs';
-import { browserPhases, runBrowser } from './browser.mjs';
+import { browserPhases, receiptReasons, runBrowser } from './browser.mjs';
 import { verifyIssue } from './verify.mjs';
 
 const result = (outcome, reasonCode, observedAt = new Date().toISOString()) => ({
@@ -63,7 +63,11 @@ export async function runHeartbeat(
       if (!unstableListing && browserPhases.includes(evidence.browserPhase)) {
         phase = evidence.browserPhase;
       }
-      console.error(`[sdk-heartbeat] inconclusive phase=${phase}`);
+      const reason =
+        phase === 'delivery_receipt' && receiptReasons.includes(evidence.receiptReason)
+          ? ` reason=${evidence.receiptReason}`
+          : '';
+      console.error(`[sdk-heartbeat] inconclusive phase=${phase}${reason}`);
     }
     report =
       code === 'issue_verified'
