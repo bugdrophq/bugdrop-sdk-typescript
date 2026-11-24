@@ -125,3 +125,21 @@ it.each([
   await expect(controller.ready).rejects.toThrow('Unable to load');
   expect(JSON.parse(request!)).toEqual({ version: 1, options: options.presentation });
 });
+
+it('forwards presentation read from an opt-in options getter', async () => {
+  const { BugDropOptIn } = await import('../packages/browser/src/opt-in.js');
+  class OptInOptions {
+    applicationId = options.applicationId;
+    tokenProviderWithMetadata = options.tokenProvider;
+
+    get presentation() {
+      return options.presentation;
+    }
+  }
+  const controller = BugDropOptIn.init(new OptInOptions());
+  const script = document.querySelector('script')!;
+  const request = script.dataset.presentation;
+  script.dispatchEvent(new Event('error'));
+  await expect(controller.ready).rejects.toThrow('Unable to load');
+  expect(JSON.parse(request!)).toEqual({ version: 1, options: options.presentation });
+});
