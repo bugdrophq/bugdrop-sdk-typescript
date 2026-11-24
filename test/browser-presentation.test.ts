@@ -80,3 +80,12 @@ it('rejects invalid or oversized presentation containers before inserting a scri
   ).toThrow('presentation configuration is too large');
   expect(document.querySelector('script')).toBeNull();
 });
+
+it('rejects a presentation with values JSON would silently omit', async () => {
+  const { BugDrop } = await import('../packages/browser/src/index.js');
+  const presentation = { accentColor: '#a1236f', unknownEffect: () => true };
+  expect(() => BugDrop.init({ ...options, presentation })).toThrow(
+    'presentation must contain serializable options'
+  );
+  expect(document.querySelector('script')).toBeNull();
+});

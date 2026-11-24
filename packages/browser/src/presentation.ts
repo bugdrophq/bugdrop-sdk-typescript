@@ -9,7 +9,12 @@ export function serializePresentation(
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('presentation must be an object');
   }
-  const request = JSON.stringify({ version: 1, options });
+  let request: string;
+  try {
+    request = JSON.stringify({ version: 1, options: structuredClone(options) });
+  } catch {
+    throw new TypeError('presentation must contain serializable options');
+  }
   if (request.length > 1024) throw new TypeError('presentation configuration is too large');
   return request;
 }

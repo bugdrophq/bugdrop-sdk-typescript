@@ -115,7 +115,7 @@ as end-to-end supported.
 ## Optional widget presentation
 
 The browser loader forwards `presentation` to a compatible managed widget. Both ordinary and
-opt-in initialization accept the same presentation object. For example, set
+opt-in initialization accept the same serializable presentation object. For example, set
 `presentation: { accentColor: '#a1236f' }` to use the same custom accent as the script tag's
 `data-color` setting. Omitting `presentation` preserves the existing widget initialization.
 
