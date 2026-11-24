@@ -112,6 +112,25 @@ Fixtures in `packages/contracts/fixtures` are compatibility inputs, not signing 
 credentials. The authoritative service repository must consume the same vector before V1 is claimed
 as end-to-end supported.
 
+## Optional widget presentation
+
+The browser loader forwards `presentation` to a compatible managed widget. Both ordinary and
+opt-in initialization accept the same presentation object. For example, set
+`presentation: { accentColor: '#a1236f' }` to use the same custom accent as the script tag's
+`data-color` setting. Omitting `presentation` preserves the existing widget initialization.
+
+The canonical public presentation declaration is `src/widget/managed/presentation-types.ts` in the BugDrop
+widget repository. Copy that declaration verbatim to `packages/browser/src/widget-presentation.generated.ts`
+when updating the supported options. The paired artifact test compares the two declarations and
+exercises the actual packaged SDK and hosted widget. The widget validates and renders the options.
+
+The optional presentation bootstrap uses `data-presentation` with a JSON envelope containing
+`version: 1` and `options`, bounded to 1024 UTF-16 code units. The widget stages its UI and dispatches
+a cancelable `bugdrop:presentation-ready` event on its own script, with the exact envelope as detail.
+The SDK acknowledges the matching event from the executing script by preventing its default.
+The widget then mounts and emits its usual readiness event. Unsupported widget versions cannot
+silently claim readiness for an explicitly requested presentation.
+
 ## Stage 0 reconciliation and publication gate
 
 This tranche was cross-checked against the 2026-09-16 decision-complete

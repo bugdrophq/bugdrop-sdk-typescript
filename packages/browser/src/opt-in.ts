@@ -24,6 +24,7 @@ const allowedKeys = [
   'theme',
   'position',
   'button',
+  'presentation',
 ];
 
 export class BugDropOptIn {

@@ -1,4 +1,11 @@
 import packageMetadata from '../package.json';
+import { validateServiceUrl } from './widget-url.js';
+import {
+  acceptPresentationEvent,
+  PRESENTATION_READY_EVENT,
+  serializePresentation,
+} from './presentation.js';
+import type { BugDropPresentation } from './widget-presentation.generated.js';
 import {
   BUGDROP_CONTRACT_VERSION,
   parseSubmissionBinding,
@@ -25,6 +32,7 @@ export interface BugDropBrowserOptions {
   theme?: BugDropTheme;
   position?: BugDropPosition;
   button?: boolean;
+  presentation?: BugDropPresentation;
 }
 
 interface HostedWidgetApi {
@@ -50,6 +58,7 @@ let providerSequence = 0;
 let activeController: BugDropController | undefined;
 let activeApplicationId: string | undefined;
 let activeMode: 'classic' | 'opt-in' | undefined;
+let activePresentation: string | undefined;
 let initializing = false;
 
 export class BugDropController {
@@ -96,6 +105,7 @@ export function initialize(
 ): BugDropController {
   assertBrowserRuntime();
   validateOptions(options);
+  const presentation = serializePresentation(options.presentation);
   if (initializing) throw new Error('BugDrop is already initializing');
   if (activeMode && activeMode !== mode) {
     throw new Error('BugDrop initialization modes cannot be mixed');
@@ -103,6 +113,9 @@ export function initialize(
   if (activeController) {
     if (activeApplicationId !== options.applicationId) {
       throw new Error('BugDrop is already initialized for another Application');
+    }
+    if (activePresentation !== presentation) {
+      throw new Error('BugDrop is already initialized with different presentation configuration');
     }
     return activeController;
   }
@@ -119,21 +132,26 @@ export function initialize(
   let apiPromise: Promise<HostedWidgetApi>;
   initializing = true;
   try {
-    apiPromise = loadHostedWidget(options);
+    apiPromise = loadHostedWidget(options, presentation);
   } finally {
     initializing = false;
   }
   activeMode = mode;
   activeController = new BugDropController(apiPromise);
   activeApplicationId = options.applicationId;
+  activePresentation = presentation;
   void apiPromise.catch(() => {
     activeController = undefined;
     activeApplicationId = undefined;
     activeMode = undefined;
+    activePresentation = undefined;
   });
   return activeController;
 }
-function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetApi> {
+function loadHostedWidget(
+  options: BugDropBrowserOptions,
+  presentation?: string
+): Promise<HostedWidgetApi> {
   const providerName = `__bugdropSdkTokenProvider_${Date.now()}_${++providerSequence}` as const;
   const script = document.createElement('script');
   const widgetUrl = validateServiceUrl(options.widgetUrl ?? DEFAULT_WIDGET_URL, 'widgetUrl');
@@ -162,9 +180,11 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
   if (options.theme) script.dataset.theme = options.theme;
   if (options.position) script.dataset.position = options.position;
   if (options.button !== undefined) script.dataset.button = String(options.button);
+  if (presentation !== undefined) script.dataset.presentation = presentation;
 
   return new Promise<HostedWidgetApi>((resolve, reject) => {
     let settled = false;
+    let presentationAccepted = false;
     const timeout = window.setTimeout(
       () => fail('Timed out loading the BugDrop widget'),
       timeoutMs
@@ -173,6 +193,7 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
     const cleanupListeners = () => {
       window.clearTimeout(timeout);
       window.removeEventListener('bugdrop:ready', onReady);
+      script.removeEventListener(PRESENTATION_READY_EVENT, onPresentationReady);
       script.removeEventListener('error', onError);
       script.removeEventListener('load', onLoad);
     };
@@ -200,13 +221,24 @@ function loadHostedWidget(options: BugDropBrowserOptions): Promise<HostedWidgetA
     };
 
     // The global event is shared with direct installations; only this script owns our readiness.
+    const onPresentationReady = (event: Event) => {
+      if (presentation !== undefined)
+        presentationAccepted = acceptPresentationEvent(event, script, presentation);
+    };
     const onReady = () => {
-      if (document.currentScript === script) finish();
+      if (document.currentScript === script && (presentation === undefined || presentationAccepted))
+        finish();
     };
     const onError = () => fail('Unable to load the BugDrop widget');
-    const onLoad = () => finish();
+    const onLoad = () => {
+      if (presentation === undefined) finish();
+      else
+        fail('The hosted BugDrop widget does not support the requested presentation configuration');
+    };
 
     window.addEventListener('bugdrop:ready', onReady);
+    if (presentation !== undefined)
+      script.addEventListener(PRESENTATION_READY_EVENT, onPresentationReady);
     script.addEventListener('error', onError, { once: true });
     script.addEventListener('load', onLoad, { once: true });
     document.head.appendChild(script);
@@ -248,6 +280,7 @@ function validateOptions(options: BugDropBrowserOptions): void {
     'theme',
     'position',
     'button',
+    'presentation',
   ]);
   if (
     options.loadTimeoutMs !== undefined &&
@@ -261,36 +294,6 @@ function assertOnlyKeys(value: object, allowedKeys: readonly string[]): void {
   if (Object.keys(value).some((key) => !allowedKeys.includes(key))) {
     throw new TypeError('BugDrop options contain unsupported fields');
   }
-}
-
-function validateServiceUrl(value: string, field: string): string {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new TypeError(`${field} must be a valid URL`);
-  }
-  const localDevelopment = isLoopbackHost(url.hostname);
-  if (
-    (url.protocol !== 'https:' && !(localDevelopment && url.protocol === 'http:')) ||
-    url.username ||
-    url.password
-  ) {
-    throw new TypeError(`${field} must use HTTPS without embedded credentials`);
-  }
-  if (url.search || url.hash) {
-    throw new TypeError(`${field} must not include a query string or fragment`);
-  }
-  return url.href;
-}
-
-function isLoopbackHost(hostname: string): boolean {
-  return (
-    hostname === 'localhost' ||
-    hostname.endsWith('.localhost') ||
-    hostname === '127.0.0.1' ||
-    hostname === '[::1]'
-  );
 }
 
 function isHostedWidgetApi(value: unknown): value is HostedWidgetApi {
