@@ -231,7 +231,7 @@ function loadHostedWidget(
     };
     const onError = () => fail('Unable to load the BugDrop widget');
     const onLoad = () => {
-      if (presentation === undefined) finish();
+      if (presentation === undefined || presentationAccepted) finish();
       else
         fail('The hosted BugDrop widget does not support the requested presentation configuration');
     };

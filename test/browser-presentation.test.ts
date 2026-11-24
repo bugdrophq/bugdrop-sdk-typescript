@@ -70,6 +70,28 @@ it('rejects generic readiness without an acknowledgment and retires the provider
   expect(window[provider]).toBeUndefined();
 });
 
+it('accepts load readiness after a matching script acknowledgment without a public event', async () => {
+  const { BugDrop } = await import('../packages/browser/src/index.js');
+  const controller = BugDrop.init(options);
+  const script = document.querySelector('script')!;
+  const currentScript = vi.spyOn(document, 'currentScript', 'get').mockReturnValue(script);
+  try {
+    const accepted = script.dispatchEvent(
+      new CustomEvent('bugdrop:presentation-ready', {
+        detail: script.dataset.presentation,
+        cancelable: true,
+      })
+    );
+    expect(accepted).toBe(false);
+    window.BugDrop = widgetApi;
+  } finally {
+    currentScript.mockRestore();
+  }
+  script.dispatchEvent(new Event('load'));
+  await expect(controller.ready).resolves.toBeUndefined();
+  expect(script.isConnected).toBe(true);
+});
+
 it('rejects invalid or oversized presentation containers before inserting a script', async () => {
   const { BugDrop } = await import('../packages/browser/src/index.js');
   expect(() => BugDrop.init({ ...options, presentation: [] } as unknown as typeof options)).toThrow(
