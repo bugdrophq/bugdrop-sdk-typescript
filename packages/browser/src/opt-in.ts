@@ -24,6 +24,7 @@ const allowedKeys = [
   'theme',
   'position',
   'button',
+  'presentation',
 ];
 
 export class BugDropOptIn {
@@ -34,16 +35,17 @@ export class BugDropOptIn {
     if (Object.keys(options).some((key) => !allowedKeys.includes(key))) {
       throw new TypeError('BugDrop opt-in options contain unsupported fields');
     }
-    const { tokenProviderWithMetadata, ...presentation } = options;
+    const { tokenProviderWithMetadata, presentation, ...browserOptions } = options;
     if (typeof tokenProviderWithMetadata !== 'function') {
       throw new TypeError('BugDrop opt-in requires a metadata token provider');
     }
     // A failed or reentrant call cannot request a replacement for the same report.
     // Binding validation occurs in the shared loader before this callback.
-    const applicationId = presentation.applicationId;
+    const applicationId = browserOptions.applicationId;
     return initialize(
       {
-        ...presentation,
+        ...browserOptions,
+        ...(presentation === undefined ? {} : { presentation }),
         tokenProvider(binding) {
           const attemptKey = JSON.stringify([applicationId, binding.submissionId]);
           if (attempted.has(attemptKey)) {

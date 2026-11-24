@@ -1,6 +1,7 @@
 import { initialize, type BugDropBrowserOptions, type BugDropController } from './loader.js';
 
 export { BugDropController } from './loader.js';
+export type { BugDropPresentation } from './widget-presentation.generated.js';
 export type {
   BugDropBrowserOptions,
   BugDropTheme,
