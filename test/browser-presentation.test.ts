@@ -90,9 +90,12 @@ it('rejects a presentation with values JSON would silently omit', async () => {
   expect(document.querySelector('script')).toBeNull();
 });
 
-it('forwards own option properties without losing them when snapshotting', async () => {
+it.each([
+  ['a built-in object', () => Object.assign(new Map(), options.presentation)],
+  ['a proxy', () => new Proxy(options.presentation, {})],
+])('forwards own option properties from %s without losing them', async (_label, configure) => {
   const { BugDrop } = await import('../packages/browser/src/index.js');
-  const presentation = Object.assign(new Map(), options.presentation);
+  const presentation = configure();
   const controller = BugDrop.init({ ...options, presentation });
   const script = document.querySelector('script')!;
   const request = script.dataset.presentation;
