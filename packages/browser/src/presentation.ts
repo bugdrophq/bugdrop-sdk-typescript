@@ -11,7 +11,7 @@ export function serializePresentation(
   }
   let request: string;
   try {
-    request = JSON.stringify({ version: 1, options: structuredClone(options) });
+    request = JSON.stringify({ version: 1, options: structuredClone({ ...options }) });
   } catch {
     throw new TypeError('presentation must contain serializable options');
   }

@@ -89,3 +89,14 @@ it('rejects a presentation with values JSON would silently omit', async () => {
   );
   expect(document.querySelector('script')).toBeNull();
 });
+
+it('forwards own option properties without losing them when snapshotting', async () => {
+  const { BugDrop } = await import('../packages/browser/src/index.js');
+  const presentation = Object.assign(new Map(), options.presentation);
+  const controller = BugDrop.init({ ...options, presentation });
+  const script = document.querySelector('script')!;
+  const request = script.dataset.presentation;
+  script.dispatchEvent(new Event('error'));
+  await expect(controller.ready).rejects.toThrow('Unable to load');
+  expect(JSON.parse(request!)).toEqual({ version: 1, options: options.presentation });
+});
